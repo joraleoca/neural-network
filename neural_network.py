@@ -2,10 +2,14 @@ import numpy as np
 from numpy.typing import NDArray
 
 from typing import Final, Any
+from copy import deepcopy
 
 from activation import FunctionActivation
-from initialization import Initializator, HeUniform
-from optimizer import Optimizer, SGD
+from optimizer import Optimizer
+from config import NeuralNetworkConfig, TrainingConfig
+from regularization import Dropout
+
+FILE_NAME = "params"
 
 
 class NeuralNetwork:
@@ -17,10 +21,8 @@ class NeuralNetwork:
         "hidden_activation",
         "output_activation",
         "optimizer",
-        "learning_rate",
-        "momentum",
+        "dropout",
         "_label_to_index",
-        "_last_weights_updates",
     )
 
     weights: list[NDArray[np.floating[Any]]]
@@ -37,63 +39,49 @@ class NeuralNetwork:
     output_activation: FunctionActivation
 
     optimizer: Optimizer
-
-    learning_rate: float
-    momentum: float
+    dropout: Dropout | None
 
     EPSILON: Final[float] = 1e-15
-    MAX_DELTA_NORM: Final[float] = float("inf")
+    MAX_DELTA_NORM: Final[float] = 5.0
 
-    def __init__(
-        self,
-        network_structure: list[int],
-        classes: tuple[str, ...],
-        hidden_activation: FunctionActivation,
-        output_activation: FunctionActivation,
-        *,
-        learning_rate: float = 0.001,
-        initializator: Initializator = HeUniform(),
-        optimizer: Optimizer = SGD(),
-        random_seed=None,
-    ) -> None:
+    def __init__(self, config: NeuralNetworkConfig) -> None:
         """
-        Initializes the neural network with the given structure, activation functions, and optional random seed.
+        Initializes the neural network with the given config.
         Args:
-            network_structure (list[int]): A list representing the number of nodes in each layer of the network.
-            classes (tuple[str, ...]): A tuple of class labels for the output layer.
-            hidden_activation (FunctionActivation): The activation function to use for hidden layers.
-            output_activation (FunctionActivation): The activation function to use for the output layer.
-            initializator (Initializator): The weights and biases initializator
-            random_seed (optional): An optional seed for random number generation. Defaults to None.
-        Raises:
-            ValueError: If the number of output nodes does not match the number of output classes.
+            config (NeuralNetworkConfig): Configuration for the neural network.
         """
-        if learning_rate <= 0:
-            raise ValueError("Learning rate must be positive")
-        if not network_structure or any(n <= 0 for n in network_structure):
-            raise ValueError("Invalid network structure")
-        if network_structure[-1] != len(classes):
-            raise ValueError(
-                "The network must have the same output nodes as output classes"
+        self.num_hidden_layers = (
+            len(config.network_structure) - 2
+        )  # First and last layer
+        self.hidden_activation = config.hidden_activation
+        self.output_activation = config.output_activation
+        self.optimizer = config.optimizer
+        self.dropout = config.dropout
+        self.classes = config.classes
+        self._label_to_index = {c: i for i, c in enumerate(config.classes)}
+
+        if not config.load_parameters:
+            self.weights = config.initializator.initializate(
+                config.network_structure, rng=np.random.default_rng(config.random_seed)
             )
-
-        self.learning_rate = learning_rate
-        self.num_hidden_layers = len(network_structure) - 2  # First and last layer
-        self.hidden_activation = hidden_activation
-        self.output_activation = output_activation
-        self.optimizer = optimizer
-        if self.optimizer:
-            self.optimizer.learning_rate = learning_rate
-        self.classes = classes
-        self._label_to_index = {c: i for i, c in enumerate(classes)}
-
-        self.weights = initializator.initializate(
-            network_structure, rng=np.random.default_rng(random_seed)
-        )
-        self.biases = [
-            np.zeros((network_structure[i + 1], 1))
-            for i in range(len(network_structure) - 1)
-        ]
+            self.biases = [
+                np.zeros((config.network_structure[i + 1], 1))
+                for i in range(len(config.network_structure) - 1)
+            ]
+        else:
+            try:
+                with np.load(config.load_file_name, "r") as params:
+                    self.weights = [
+                        params[f"weights{i}"]
+                        for i in range(len(config.network_structure) - 1)
+                    ]
+                    self.biases = [
+                        params[f"biases{i}"]
+                        for i in range(len(config.network_structure) - 1)
+                    ]
+            except Exception as e:
+                print(f"Error loading parameters: {e}")
+                return
 
     def forward_pass(
         self, inputs: NDArray[np.floating[Any]]
@@ -105,16 +93,24 @@ class NeuralNetwork:
         Returns:
             NDArray[np.floating[Any]]: The output of the neural network after the forward pass.
         """
+        if len(inputs) != self.weights[0].shape[1]:
+            raise ValueError(
+                f"Input size {len(inputs)} does not match expected size {self.weights[0].shape[1]}"
+            )
+
         output, _ = self._forward_pass(inputs)
         return output[-1]
 
     def _forward_pass(
-        self, inputs: NDArray[np.floating[Any]]
+        self,
+        inputs: NDArray[np.floating[Any]],
+        training: bool = False,
     ) -> tuple[list[NDArray[np.floating[Any]]], list[NDArray[np.floating[Any]]]]:
         """
         Perform a forward pass through the neural network.
         Args:
             inputs (NDArray[np.floating[Any]]): The input data for the neural network.
+            training (bool): Flag indicating if its training or not
         Returns:
             (tuple[list[NDArray[np.floating[Any]]], list[NDArray[np.floating[Any]]]]):
                 A tuple containing two lists:
@@ -130,6 +126,8 @@ class NeuralNetwork:
 
             if i != self.num_hidden_layers:
                 activation = self.hidden_activation.activate(z)
+                if self.dropout and training:
+                    self.dropout.drop(activation)
             else:
                 activation = self.output_activation.activate(z)
 
@@ -156,7 +154,7 @@ class NeuralNetwork:
         return encode
 
     def _backwards(
-        self, data: list[tuple[np.ndarray, str]], losses: list[np.floating]
+        self, lr: float, data: list[tuple[np.ndarray, str]], losses: list[np.floating]
     ) -> None:
         """
         Perform the backward pass of the neural network, updating weights and biases.
@@ -169,7 +167,7 @@ class NeuralNetwork:
         """
         for inputs, expected_label in data:
             expected = self.one_hot_encode(expected_label)
-            outputs_layers, inputs_layers = self._forward_pass(inputs)
+            outputs_layers, inputs_layers = self._forward_pass(inputs, training=True)
             predicted = outputs_layers[-1]
 
             losses.append(self.categorical_crossentropy(expected, predicted))
@@ -190,35 +188,81 @@ class NeuralNetwork:
 
             gradient.reverse()
 
+            weight_gradient = [
+                (g @ outputs_layers[i].T) for i, g in enumerate(gradient)
+            ]
+            biases_gradient = list(gradient)
+
             # Update the parameters based on the gradient
-            self.optimizer.optimize(
-                gradient,
+            self.optimizer.optimize_weights(
+                lr,
+                weight_gradient,
                 weights=self.weights,
+            )
+            self.optimizer.optimize_biases(
+                lr,
+                biases_gradient,
                 biases=self.biases,
-                output_layers=outputs_layers,
             )
 
     def train(
         self,
         data_train: list[tuple[np.ndarray, str]],
         data_evaluate: list[tuple[np.ndarray, str]],
-        *,
-        epochs: int = 1000,
-        debug: bool = False,
+        config: TrainingConfig = TrainingConfig(),
     ) -> None:
         losses = []
+        last_epoch_loss = float("inf")
+        patience_counter = 0
 
-        for epoch in range(epochs + 1):
-            self._backwards(data_train, losses)
+        best_weights = []
+        best_biases = []
+        best_accuracy = 0.0
 
-            if debug:
-                accuracy = self.evaluate(data_evaluate)
-                current_epoch_loss = np.mean(
-                    losses[epoch * len(data_train) : (epoch + 1) * len(data_train)]
-                )
+        for epoch in range(config.epochs + 1):
+            self._backwards(config.lr.learning_rate, data_train, losses)
+
+            current_epoch_loss = np.mean(
+                losses[epoch * len(data_train) : (epoch + 1) * len(data_train)]
+            )
+
+            val_accuracy = self.evaluate(data_evaluate)
+
+            if val_accuracy > best_accuracy:  # Change criterion to validation accuracy
+                best_accuracy = val_accuracy
+                best_weights = deepcopy(self.weights)
+                best_biases = deepcopy(self.biases)
+
+            if current_epoch_loss < last_epoch_loss - config.min_delta:
+                patience_counter = 0
+                last_epoch_loss = current_epoch_loss
+            else:
+                patience_counter += 1
+
+            if patience_counter >= config.patience_stop:
+                print(f"Early stopping at epoch {epoch} due to no improvement in loss.")
+                break
+
+            if config.lr.patience_update == 0 or epoch % config.lr.patience_update == 0:
+                config.lr.update()
+
+            if config.debug:
+                train_accuracy = self.evaluate(data_train)
                 print(
-                    f"Epoch {epoch}, Accuracy: {accuracy:.4f}, Loss: {current_epoch_loss:.4f}"
+                    f"Epoch {epoch}, "
+                    f"Accuracy: {val_accuracy:.4f}, "
+                    f"Loss: {current_epoch_loss:.4f}, "
+                    f"Accuracy_train: {train_accuracy:.4f}"
                 )
+
+        self.weights = best_weights
+        self.biases = best_biases
+
+        if config.store:
+            kwds = {f"weights{i}": w for i, w in enumerate(self.weights)}
+            kwds.update({f"biases{i}": b for i, b in enumerate(self.biases)})
+
+            np.savez(FILE_NAME, **kwds)
 
     def categorical_crossentropy(
         self,
