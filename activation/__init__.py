@@ -1,7 +1,5 @@
 """
 This module implements various activation functions commonly used in neural networks.
-Each activation function is implemented as a concrete class inheriting from the abstract
-FunctionActivation base class.
 
 Classes:
     - FunctionActivation: Abstract base class defining the interface for activation functions
@@ -10,18 +8,6 @@ Classes:
     - Tanh: Implementation of the Hyperbolic Tangent activation function
     - Softmax: Implementation of the Softmax activation function for multi-class classification
     - Sigmoid: Implementation of the Sigmoid (logistic) activation function
-
-Example:
-    >>> import numpy as np
-    >>> from activation import Relu
-    >>>
-    >>> # Create activation function instance
-    >>> relu = Relu()
-    >>>
-    >>> # Apply activation to data
-    >>> data = np.array([-2.0, -1.0, 0.0, 1.0, 2.0])
-    >>> activated = relu.activate(data)
-    >>> print(activated)  # array([0., 0., 0., 1., 2.])
 """
 
 from .activation import FunctionActivation

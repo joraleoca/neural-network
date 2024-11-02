@@ -1,7 +1,5 @@
 """
 This module implements various optimization algorithms commonly used in training neural networks.
-Each optimizer is implemented as a concrete class inheriting from the abstract
-Optimizer base class.
 
 Classes:
     - Optimizer: Abstract base class defining the interface for optimization algorithms

@@ -1,7 +1,5 @@
 """
 This module implements various initialization methods commonly used in neural networks.
-Each initialization method is implemented as a concrete class inheriting from the abstract
-Initializator base class.
 
 Classes:
     - Initializator: Abstract base class defining the interface for initialization methods
