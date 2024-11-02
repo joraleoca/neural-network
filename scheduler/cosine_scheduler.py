@@ -8,13 +8,13 @@ from .scheduler import Scheduler
 @dataclass(slots=True)
 class CosineScheduler(Scheduler):
     """
-    Learning rate scheduler that reduces the learning rate by a factor.
+    CosineScheduler is a learning rate scheduler that adjusts the learning rate
+    following a cosine schedule.
 
     Attributes:
-        learning_rate (float): Initial learning rate
-        factor_lr (float): Factor to multiply learning rate by each update
-        min_lr (float): Minimum learning rate
-        max_steps (int): Max steps until learning rate is min_lr
+        max_steps (int): The total number of steps (epochs) for the scheduler.
+        learning_rate (float): The initial learning rate. Default is 0.01.
+        min_lr (float): The minimum learning rate. Default is 1e-7.
     """
 
     max_steps: int
@@ -23,7 +23,6 @@ class CosineScheduler(Scheduler):
     min_lr: float = 1e-7
 
     _initial_lr: float = field(init=False)
-    _t: int = field(init=False, default=0)
 
     def __post_init__(self):
         """Validate initialization parameters."""
@@ -37,8 +36,7 @@ class CosineScheduler(Scheduler):
             )
         self._initial_lr = self.learning_rate
 
-    def update(self) -> None:
+    def update(self, epoch: int) -> None:
         self.learning_rate = self.min_lr + ((self._initial_lr - self.min_lr) / 2) * (
-            1 + np.cos((np.pi * self._t / self.max_steps))
+            1 + np.cos((np.pi * epoch / self.max_steps))
         )
-        self._t += 1

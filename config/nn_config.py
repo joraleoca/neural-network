@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 
 from activation import FunctionActivation
 from initialization import Initializator, HeUniform
+from loss import Loss
 from optimizer import Optimizer, SGD
 from regularization import Dropout
 from core import ParameterLoader
@@ -12,11 +13,13 @@ class NeuralNetworkConfig:
     """
     NeuralNetworkConfig is a configuration class for setting up a neural network.
     If load_parameters is True and the network structure does not have hidden layers or any layer, they will be loaded from the file.
+
     Attributes:
         network_structure (list[int]): A list representing the number of nodes in each layer of the network.
         classes (tuple[str, ...]): A tuple containing the class labels for the output layer.
         hidden_activation (FunctionActivation): The activation function to be used for the hidden layers.
         output_activation (FunctionActivation): The activation function to be used for the output layer.
+        loss (Loss): The loss functions.
         initializator (Initializator): The weight initialization strategy.
         optimizer (Optimizer): The optimization algorithm.
         batch_size (int): Size of the batches used for training.
@@ -30,6 +33,8 @@ class NeuralNetworkConfig:
 
     hidden_activation: FunctionActivation
     output_activation: FunctionActivation
+
+    loss: Loss
 
     initializator: Initializator = field(default_factory=HeUniform)
     optimizer: Optimizer = field(default_factory=SGD)

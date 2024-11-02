@@ -1,4 +1,4 @@
-from initialization.initialization import Uniform, Normal
+from .initialization import Uniform, Normal
 
 import numpy as np
 from numpy.typing import NDArray

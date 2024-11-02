@@ -1,26 +1,3 @@
-"""
-initialization.py
-This module implements various weight initialization strategies for neural networks.
-Each initializer is implemented as a concrete class inheriting from the abstract
-Initializator base class.
-    Initializator: Abstract base class defining the interface for weight initializers.
-    Normal: Implementation of weight initialization using a normal distribution.
-    Uniform: Implementation of weight initialization using a uniform distribution.
-    HeUniform: Implementation of He Uniform initialization for neural network weights.
-    HeNormal: Implementation of He Normal initialization for neural network weights.
-    XavierUniform: Implementation of Xavier Uniform initialization for neural network weights.
-    XavierNormal: Implementation of Xavier Normal initialization for neural network weights.
-    >>> from initialization import HeNormal
-    >>> # Create initializer instance
-    >>> initializer = HeNormal(gain=1.0)
-    >>> # Define network structure
-    >>> network_structure = [3, 5, 2]
-    >>> # Initialize weights
-    >>> weights = initializer.initializate(network_structure)
-    >>> for w in weights:
-    >>>     print(w.shape)  # Output: (5, 3) and (2, 5)
-"""
-
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -29,6 +6,12 @@ from numpy.random import Generator
 
 
 class Initializator(ABC):
+    """
+    Initializator is an abstract base class for initializing neural network weights.
+    Attributes:
+        gain (float): A scaling factor for the weights.
+    """
+
     gain: float
 
     def __init__(self, gain: float = 1):

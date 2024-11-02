@@ -1,12 +1,12 @@
 """
-This module initializes the config package and imports the necessary configuration classes used in neural networks.
+This module initializes the necessary configuration classes used in neural networks.
 
 Classes:
-    - TrainingConfig: Configuration for training parameters
     - NeuralNetworkConfig: Configuration for the neural network
+    - TrainingConfig: Configuration for training parameters
 """
 
-from .training_config import TrainingConfig
 from .nn_config import NeuralNetworkConfig
+from .training_config import TrainingConfig
 
-__all__ = ["TrainingConfig", "NeuralNetworkConfig"]
+__all__ = ["NeuralNetworkConfig", "TrainingConfig"]

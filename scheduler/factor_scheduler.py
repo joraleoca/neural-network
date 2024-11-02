@@ -40,5 +40,9 @@ class FactorScheduler(Scheduler):
                 f"The patience to update the learning rate must be non-negative. Got {self.patience_update}"
             )
 
-    def update(self) -> None:
-        self.learning_rate = max(self.min_lr, self.learning_rate * self.factor_lr)
+    def update(self, epoch: int) -> None:
+        if epoch < 0:
+            raise ValueError
+
+        if self.patience_update == 0 or epoch % self.patience_update == 0:
+            self.learning_rate = max(self.min_lr, self.learning_rate * self.factor_lr)

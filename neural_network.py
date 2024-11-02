@@ -12,7 +12,7 @@ from regularization import Dropout
 from core import ParameterLoadError
 
 from preprocessing import one_hot_encode
-from losses import categorical_crossentropy, categorical_crossentropy_gradient
+from loss import Loss
 
 from core.constants import FILE_NAME, WEIGHT_PREFIX, BIAS_PREFIX
 
@@ -26,6 +26,7 @@ class NeuralNetwork:
         "_label_to_index",
         "hidden_activation",
         "output_activation",
+        "loss",
         "optimizer",
         "batch_size",
         "dropout",
@@ -35,16 +36,20 @@ class NeuralNetwork:
     weights: list[NDArray[np.floating[Any]]]
     biases: list[NDArray[np.floating[Any]]]
 
-    num_hidden_layers: int
+    num_hidden_layers: Final[int]
 
     # Set of possible output classes
-    classes: tuple[str, ...]
-    _label_to_index: dict[str, int]
+    classes: Final[tuple[str, ...]]
+    _label_to_index: Final[dict[str, int]]
 
     # Function activators
     hidden_activation: FunctionActivation
     output_activation: FunctionActivation
 
+    # Loss function
+    loss: Loss
+
+    # Regularization
     optimizer: Optimizer
     batch_size: int
     dropout: Dropout | None
@@ -66,6 +71,7 @@ class NeuralNetwork:
         self._label_to_index = {c: i for i, c in enumerate(config.classes)}
         self.hidden_activation = config.hidden_activation
         self.output_activation = config.output_activation
+        self.loss = config.loss
         self.optimizer = config.optimizer
         self.batch_size = config.batch_size
         self.dropout = config.dropout
@@ -159,7 +165,6 @@ class NeuralNetwork:
             list[np.floating]: The losses of the training.
         """
         data_array = np.array(data, dtype=object)
-        np.random.shuffle(data_array)
         n_batches = (len(data_array) + self.batch_size - 1) // self.batch_size
         batches = np.array_split(data_array, n_batches)
 
@@ -176,9 +181,9 @@ class NeuralNetwork:
                 )
                 predicted = outputs_layers[-1]
 
-                losses.append(categorical_crossentropy(expected, predicted))
+                losses.append(self.loss(expected, predicted))
 
-                gradient = [categorical_crossentropy_gradient(expected, predicted)]
+                gradient = [self.loss.gradient(expected, predicted)]
 
                 for i in reversed(range(len(self.weights) - 1)):
                     gradient.append(
@@ -255,8 +260,7 @@ class NeuralNetwork:
                 print(f"Early stopping at epoch {epoch} due to no improvement in loss.")
                 break
 
-            if config.lr.patience_update == 0 or epoch % config.lr.patience_update == 0:
-                config.lr.update()
+            config.lr.update(epoch)
 
             if config.debug:
                 train_accuracy = self.evaluate(data_train)

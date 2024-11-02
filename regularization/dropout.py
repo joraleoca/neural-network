@@ -21,5 +21,7 @@ class Dropout:
         Parameters:
             layer_output (NDArray[np.floating[Any]]): The output of the layer to which dropout will be applied.
         """
-        mask = np.random.binomial(1, 1 - self.p, size=layer_output.shape) / (1 - self.p)
+        rng = np.random.default_rng()
+
+        mask = rng.binomial(1, 1 - self.p, size=layer_output.shape) / (1 - self.p)
         layer_output[:] *= mask
