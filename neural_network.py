@@ -6,14 +6,12 @@ from copy import deepcopy
 from pathlib import Path
 
 from activation import FunctionActivation
+from loss import Loss
+from encode import Encoder
 from optimizer import Optimizer
 from config import NeuralNetworkConfig, TrainingConfig
 from regularization import Dropout
 from core import ParameterLoadError
-
-from preprocessing import one_hot_encode
-from loss import Loss
-
 from core.constants import FILE_NAME, WEIGHT_PREFIX, BIAS_PREFIX
 
 
@@ -22,11 +20,10 @@ class NeuralNetwork:
         "weights",
         "biases",
         "num_hidden_layers",
-        "classes",
-        "_label_to_index",
         "hidden_activation",
         "output_activation",
         "loss",
+        "encoder",
         "optimizer",
         "batch_size",
         "dropout",
@@ -38,16 +35,12 @@ class NeuralNetwork:
 
     num_hidden_layers: Final[int]
 
-    # Set of possible output classes
-    classes: Final[tuple[str, ...]]
-    _label_to_index: Final[dict[str, int]]
-
     # Function activators
     hidden_activation: FunctionActivation
     output_activation: FunctionActivation
 
-    # Loss function
     loss: Loss
+    encoder: Encoder
 
     # Regularization
     optimizer: Optimizer
@@ -67,11 +60,10 @@ class NeuralNetwork:
         self.num_hidden_layers = (
             len(config.network_structure) - 2
         )  # First and last layer
-        self.classes = config.classes
-        self._label_to_index = {c: i for i, c in enumerate(config.classes)}
         self.hidden_activation = config.hidden_activation
         self.output_activation = config.output_activation
         self.loss = config.loss
+        self.encoder = config.loss.encoder()(config.classes)
         self.optimizer = config.optimizer
         self.batch_size = config.batch_size
         self.dropout = config.dropout
@@ -175,7 +167,7 @@ class NeuralNetwork:
             biases_batch_gradient = [np.zeros_like(b) for b in self.biases]
 
             for inputs, expected_label in data_batch:
-                expected = one_hot_encode(expected_label, self._label_to_index)
+                expected = self.encoder(expected_label)
                 outputs_layers, inputs_layers = self._forward_pass(
                     inputs, training=True
                 )
@@ -227,7 +219,6 @@ class NeuralNetwork:
         data_evaluate: list[tuple[np.ndarray, str]],
         config: TrainingConfig = TrainingConfig(),
     ) -> None:
-        losses = []
         last_epoch_loss = float("inf")
         patience_counter = 0
 
@@ -237,11 +228,7 @@ class NeuralNetwork:
 
         for epoch in range(config.epochs + 1):
             loss = self._backwards(config.lr.learning_rate, data_train)
-            losses.append(loss)
-
-            current_epoch_loss = np.mean(
-                losses[epoch * len(data_train) : (epoch + 1) * len(data_train)]
-            )
+            current_epoch_loss = np.mean(loss)
 
             val_accuracy = self.evaluate(data_evaluate)
 
@@ -292,8 +279,12 @@ class NeuralNetwork:
             float: The accuracy of the neural network on the provided dataset, calculated as the
                proportion of correctly classified inputs.
         """
+
+        def simplify_array(arr: NDArray):
+            return arr.item() if arr.size == 1 else arr
+
         correct = sum(
-            self.classes[np.argmax(self.forward_pass(input))] == label
+            self.encoder.decode(simplify_array(self.forward_pass(input))) == label
             for input, label in data
         )
         return correct / len(data)

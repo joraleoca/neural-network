@@ -34,6 +34,11 @@ class CosineScheduler(Scheduler):
             raise ValueError(
                 f"The minimum learning rate must be greater than 0. Got {self.min_lr}"
             )
+        if self.min_lr > self.learning_rate:
+            raise ValueError(
+                f"The minimum learning rate must be less than the initial learning rate. Got {self.min_lr} > {self.learning_rate}"
+            )
+
         self._initial_lr = self.learning_rate
 
     def update(self, epoch: int) -> None:

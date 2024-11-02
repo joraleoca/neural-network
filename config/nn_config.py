@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 
 from activation import FunctionActivation
 from initialization import Initializator, HeUniform
-from loss import Loss
+from loss import Loss, BinaryCrossentropy
 from optimizer import Optimizer, SGD
 from regularization import Dropout
 from core import ParameterLoader
@@ -53,11 +53,11 @@ class NeuralNetworkConfig:
             raise ValueError(
                 "Invalid network structure. Each layer must have at least one node."
             )
-        if self.network_structure[-1] != len(self.classes):
-            raise ValueError(
-                "The network must have the same output nodes as output classes"
-            )
         if self.batch_size < 1:
             raise ValueError(
                 f"The batch size must be positive number. Got {self.batch_size}"
+            )
+        if isinstance(self.loss, BinaryCrossentropy) and len(self.classes) != 2:
+            raise ValueError(
+                f"The binary cross-entropy only works with 2 classes. Got {len(self.classes)}"
             )

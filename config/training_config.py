@@ -38,10 +38,5 @@ class TrainingConfig:
                 f"The patience to stop must be non negative. Got {self.patience_stop}."
             )
 
-        if self.lr.patience_update > self.patience_stop:
-            raise ValueError(
-                "Patience for updating the learning rate must be less than patience for stopping training."
-            )
-
         if self.min_delta <= 0:
             raise ValueError("Min delta must be greater than 0")

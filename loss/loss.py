@@ -4,6 +4,8 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from encode import Encoder
+
 
 class Loss(ABC):
     """
@@ -60,5 +62,16 @@ class Loss(ABC):
 
         Returns:
             np.floating[Any]: The gradient of the loss function.
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def encoder() -> type[Encoder]:
+        """
+        Defines the encoder function.
+
+        Returns:
+            type[Encoder]: The type of the Encoder class.
         """
         pass

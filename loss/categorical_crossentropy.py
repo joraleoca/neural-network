@@ -5,6 +5,7 @@ from numpy.typing import NDArray
 
 from .loss import Loss
 from core.constants import EPSILON
+from encode import Encoder, OneHotEncoder
 
 
 class CategoricalCrossentropy(Loss):
@@ -13,9 +14,6 @@ class CategoricalCrossentropy(Loss):
         expected: NDArray[np.floating[Any]],
         predicted: NDArray[np.floating[Any]],
     ) -> np.floating[Any]:
-        """
-        Compute the categorical cross-entropy loss function with L2 regularization (weight decay).
-        """
         if expected.shape != predicted.shape:
             raise ValueError(
                 f"Shape mismatch: expected {expected.shape}, got {predicted.shape}"
@@ -39,10 +37,6 @@ class CategoricalCrossentropy(Loss):
         expected: NDArray[np.floating[Any]],
         predicted: NDArray[np.floating[Any]],
     ) -> NDArray[np.floating[Any]]:
-        """
-        Compute the gradient of the categorical cross-entropy loss function.
-        The weight decay gradient will be handled in the optimizer.
-        """
         if expected.shape != predicted.shape:
             raise ValueError(
                 f"Shape mismatch: expected {expected.shape}, got {predicted.shape}"
@@ -57,3 +51,7 @@ class CategoricalCrossentropy(Loss):
         )
 
         return clipped_predicted - smoothed_expected
+
+    @staticmethod
+    def encoder() -> type[Encoder]:
+        return OneHotEncoder
