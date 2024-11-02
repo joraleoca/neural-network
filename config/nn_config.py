@@ -4,44 +4,55 @@ from activation import FunctionActivation
 from initialization import Initializator, HeUniform
 from optimizer import Optimizer, SGD
 from regularization import Dropout
+from core import ParameterLoader
 
 
 @dataclass(slots=True)
 class NeuralNetworkConfig:
     """
     NeuralNetworkConfig is a configuration class for setting up a neural network.
+    If load_parameters is True and the network structure does not have hidden layers or any layer, they will be loaded from the file.
     Attributes:
         network_structure (list[int]): A list representing the number of nodes in each layer of the network.
         classes (tuple[str, ...]): A tuple containing the class labels for the output layer.
         hidden_activation (FunctionActivation): The activation function to be used for the hidden layers.
         output_activation (FunctionActivation): The activation function to be used for the output layer.
-        initializator (Initializator): The weight initialization strategy, default is HeUniform.
-        optimizer (Optimizer): The optimization algorithm, default is SGD.
-        dropout (Dropout | None): The dropout configuration, default is None.
-        random_seed (int | None): The random seed for reproducibility, default is None.
+        initializator (Initializator): The weight initialization strategy.
+        optimizer (Optimizer): The optimization algorithm.
+        batch_size (int): Size of the batches used for training.
+        dropout (Dropout | None): The dropout configuration.
+        loader (ParameterLoader | None): The parameters loader from a file.
+        random_seed (int | None): The random seed for reproducibility.
     """
 
     network_structure: list[int]
     classes: tuple[str, ...]
+
     hidden_activation: FunctionActivation
     output_activation: FunctionActivation
 
     initializator: Initializator = field(default_factory=HeUniform)
     optimizer: Optimizer = field(default_factory=SGD)
+
+    batch_size: int = 1
     dropout: Dropout | None = None
 
-    load_parameters: bool = False
-    load_file_name: str = "params.npz"
-    store_file_name: str = "params.npz"
+    loader: ParameterLoader | None = None
 
     random_seed = None
 
     def __post_init__(self):
-        if not self.network_structure or any(n <= 0 for n in self.network_structure):
+        if (not self.loader and not self.network_structure) or any(
+            n <= 0 for n in self.network_structure
+        ):
             raise ValueError(
                 "Invalid network structure. Each layer must have at least one node."
             )
         if self.network_structure[-1] != len(self.classes):
             raise ValueError(
                 "The network must have the same output nodes as output classes"
+            )
+        if self.batch_size < 1:
+            raise ValueError(
+                f"The batch size must be positive number. Got {self.batch_size}"
             )

@@ -1,10 +1,8 @@
-from typing import Any, Final
+from typing import Any
 from abc import ABC, abstractmethod
 
 import numpy as np
 from numpy.typing import NDArray
-
-EPS: Final[float] = 1e-8
 
 
 class Optimizer(ABC):

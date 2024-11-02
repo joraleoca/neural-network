@@ -25,6 +25,28 @@ def min_max_scaler(
     return data_std * (max - min) + min
 
 
+def one_hot_encode(
+    label: str, label_to_index: dict[str, int]
+) -> NDArray[np.floating[Any]]:
+    """
+    Converts a label into a one-hot encoded vector.
+    Args:
+        label (str): The label to be one-hot encoded.
+        label_to_index (dict[str, int]): Dict with the index of each label.
+    Returns:
+        NDArray[np.floating[Any]]: A one-hot encoded vector representing the label.
+    Raises:
+        ValueError: If the label is not found in the classes.
+    """
+    if label not in label_to_index:
+        raise ValueError("Label is not in classes")
+
+    encode = np.zeros((len(label_to_index.keys()), 1), dtype=np.float64)
+    encode[label_to_index[label]] = 1
+
+    return encode
+
+
 def train_test_split(
     data: NDArray,
     *,

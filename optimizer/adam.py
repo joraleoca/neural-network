@@ -4,7 +4,8 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from .optimizer import Optimizer, EPS
+from .optimizer import Optimizer
+from core.constants import EPSILON
 
 
 @dataclass(slots=True)
@@ -66,7 +67,7 @@ class Adam(Optimizer):
 
         lr = lr * np.sqrt(1 - self.b2**t) / (1 - self.b1**t)
 
-        update = [lr * m_i / (np.sqrt(v_i) + EPS) for m_i, v_i in zip(m, v)]
+        update = [lr * m_i / (np.sqrt(v_i) + EPSILON) for m_i, v_i in zip(m, v)]
 
         for i, upd in enumerate(update):
             params[i] -= upd
