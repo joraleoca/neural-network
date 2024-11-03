@@ -2,10 +2,9 @@ from typing import Any
 
 import numpy as np
 
-from encode import Encoder, BinaryEncoder
-
 from .loss import Loss
 from core.constants import EPSILON
+from encode import Encoder, BinaryEncoder
 
 
 class BinaryCrossentropy(Loss):

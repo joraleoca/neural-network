@@ -1,9 +1,9 @@
-import numpy as np
-from numpy.typing import NDArray
-
 from pathlib import Path
 import os
 from typing import Any
+
+import numpy as np
+from numpy.typing import NDArray
 
 from .exceptions import ParameterLoadError
 from core.constants import FILE_NAME, WEIGHT_PREFIX, BIAS_PREFIX

@@ -3,3 +3,4 @@ numpy>=2.1.1
 pandas>=2.2.3
 ipykernel>=6.29.5
 ucimlrepo>=0.0.7
+matplotlib>=3.9.2

@@ -15,12 +15,15 @@ class CosineScheduler(Scheduler):
         max_steps (int): The total number of steps (epochs) for the scheduler.
         learning_rate (float): The initial learning rate. Default is 0.01.
         min_lr (float): The minimum learning rate. Default is 1e-7.
+        cyclic (bool): Whether the scheduler should restart after reaching max_steps.
     """
 
     max_steps: int
 
     learning_rate: float = 0.01
     min_lr: float = 1e-7
+
+    cyclic: bool = False
 
     _initial_lr: float = field(init=False)
 
@@ -42,6 +45,9 @@ class CosineScheduler(Scheduler):
         self._initial_lr = self.learning_rate
 
     def update(self, epoch: int) -> None:
+        if not self.cyclic and epoch > self.max_steps:
+            return  # the learning rate has reached its minimum
+
         self.learning_rate = self.min_lr + ((self._initial_lr - self.min_lr) / 2) * (
             1 + np.cos((np.pi * epoch / self.max_steps))
         )

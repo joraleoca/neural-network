@@ -1,9 +1,10 @@
-import numpy as np
-from numpy.typing import NDArray
-
 from typing import Final, Any
 from copy import deepcopy
 from pathlib import Path
+
+import numpy as np
+from numpy.typing import NDArray
+import matplotlib.pyplot as plt
 
 from activation import FunctionActivation
 from loss import Loss
@@ -222,6 +223,8 @@ class NeuralNetwork:
         last_epoch_loss = float("inf")
         patience_counter = 0
 
+        metrics = {"losses": [], "train_acc": [], "test_acc": []}
+
         best_weights = []
         best_biases = []
         best_accuracy = 0.0
@@ -232,7 +235,7 @@ class NeuralNetwork:
 
             val_accuracy = self.evaluate(data_evaluate)
 
-            if val_accuracy > best_accuracy:
+            if val_accuracy >= best_accuracy:
                 best_accuracy = val_accuracy
                 best_weights = deepcopy(self.weights)
                 best_biases = deepcopy(self.biases)
@@ -251,11 +254,15 @@ class NeuralNetwork:
 
             if config.debug:
                 train_accuracy = self.evaluate(data_train)
+                # Store metrics for plotting
+                metrics["losses"].append(current_epoch_loss)
+                metrics["test_acc"].append(val_accuracy)
+                metrics["train_acc"].append(train_accuracy)
                 print(
                     f"Epoch {epoch}, "
                     f"Accuracy: {val_accuracy:.4f}, "
                     f"Loss: {current_epoch_loss:.4f}, "
-                    f"Accuracy_train: {train_accuracy:.4f}"
+                    f"train_acc: {train_accuracy:.4f}"
                 )
 
         self.weights = best_weights
@@ -266,6 +273,9 @@ class NeuralNetwork:
             kwds.update({f"{BIAS_PREFIX}{i}": b for i, b in enumerate(self.biases)})
 
             np.savez(self.params_file, **kwds)
+
+        if config.debug:
+            self._plot_metrics_train(**metrics)
 
     def evaluate(self, data: list[tuple[np.ndarray, str]]) -> float:
         """
@@ -288,3 +298,48 @@ class NeuralNetwork:
             for input, label in data
         )
         return correct / len(data)
+
+    def _plot_metrics_train(
+        self,
+        losses: list[float],
+        test_acc: list[float],
+        train_acc: list[float],
+    ) -> None:
+        """
+        Plot the training metrics including loss, training accuracy, and test accuracy.
+
+        Args:
+            losses (list[float]): List of loss values for each epoch.
+            test_acc (list[float]): List of test accuracy values for each epoch.
+            train_acc (list[float]): List of training accuracy values for each epoch.
+        """
+        epochs = range(len(losses))
+
+        plt.figure(figsize=(12, 4))
+
+        # Plot loss
+        plt.subplot(1, 3, 1)
+        plt.plot(epochs, losses, label="Loss")
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.title("Training Loss")
+        plt.legend()
+
+        # Plot test accuracy
+        plt.subplot(1, 3, 3)
+        plt.plot(epochs, test_acc, label="Test Accuracy")
+        plt.xlabel("Epochs")
+        plt.ylabel("Accuracy")
+        plt.title("Test Accuracy")
+        plt.legend()
+
+        # Plot training accuracy
+        plt.subplot(1, 3, 2)
+        plt.plot(epochs, train_acc, label="Training Accuracy")
+        plt.xlabel("Epochs")
+        plt.ylabel("Accuracy")
+        plt.title("Training Accuracy")
+        plt.legend()
+
+        plt.tight_layout()
+        plt.show()

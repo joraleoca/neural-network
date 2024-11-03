@@ -1,7 +1,7 @@
-from .activation import FunctionActivation
-
 import numpy as np
 from numpy.typing import NDArray
+
+from .activation import FunctionActivation
 
 
 class LeakyRelu(FunctionActivation):

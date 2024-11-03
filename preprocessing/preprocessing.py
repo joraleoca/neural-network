@@ -1,7 +1,7 @@
+from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
-
-from typing import Any
 
 
 def min_max_scaler(
