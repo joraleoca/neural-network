@@ -326,7 +326,7 @@ class NeuralNetwork:
         plt.legend()
 
         # Plot test accuracy
-        plt.subplot(1, 3, 3)
+        plt.subplot(1, 3, 2)
         plt.plot(epochs, test_acc, label="Test Accuracy")
         plt.xlabel("Epochs")
         plt.ylabel("Accuracy")
@@ -334,7 +334,7 @@ class NeuralNetwork:
         plt.legend()
 
         # Plot training accuracy
-        plt.subplot(1, 3, 2)
+        plt.subplot(1, 3, 3)
         plt.plot(epochs, train_acc, label="Training Accuracy")
         plt.xlabel("Epochs")
         plt.ylabel("Accuracy")
