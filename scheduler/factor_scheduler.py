@@ -41,8 +41,15 @@ class FactorScheduler(Scheduler):
             )
 
     def update(self, epoch: int) -> None:
+        """
+        Updates the learning rate based on the current epoch.
+        Args:
+            epoch (int): The current epoch number. Must be a non-negative integer.
+        Raises:
+            ValueError: If the epoch is a negative integer.
+        """
         if epoch < 0:
-            raise ValueError
+            raise ValueError(f"The epoch must be a non-negative integer. Got {epoch}")
 
         if self.patience_update == 0 or epoch % self.patience_update == 0:
             self.learning_rate = max(self.min_lr, self.learning_rate * self.factor_lr)

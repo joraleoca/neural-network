@@ -10,7 +10,12 @@ from core.constants import FILE_NAME, WEIGHT_PREFIX, BIAS_PREFIX
 
 
 class ParameterLoader:
-    __slots__ = ["path"]
+    """
+    ParameterLoader is a class responsible for loading and validating neural network parameters from a file path.
+
+    Attributes:
+        path (Path): The path to the file containing the neural network parameters.
+    """
 
     path: Path
 

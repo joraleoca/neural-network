@@ -13,10 +13,14 @@ from optimizer import Optimizer
 from config import NeuralNetworkConfig, TrainingConfig
 from regularization import Dropout
 from core import ParameterLoadError
-from core.constants import FILE_NAME, WEIGHT_PREFIX, BIAS_PREFIX
+from core.constants import FILE_NAME, WEIGHT_PREFIX, BIAS_PREFIX, EPSILON
 
 
 class NeuralNetwork:
+    """
+    NeuralNetwork class for building and training a neural network.
+    """
+
     __slots__ = (
         "weights",
         "biases",
@@ -93,6 +97,16 @@ class NeuralNetwork:
                 raise ParameterLoadError(
                     f"Expected {expected_hidden_layers} hidden layers, but got {self.num_hidden_layers}"
                 )
+
+    @property
+    def classes(self) -> tuple[str, ...]:
+        """
+        Returns the classes recognized by the neural network.
+
+        Returns:
+            tuple[str, ...]: A tuple containing the class labels.
+        """
+        return self.encoder.classes
 
     def forward_pass(
         self, inputs: NDArray[np.floating[Any]]
@@ -184,11 +198,13 @@ class NeuralNetwork:
                         * self.hidden_activation.derivative(inputs_layers[i])
                     )
 
-                # Normalize gradient by dividing by its norm (L2 norm)
-                for i, d in enumerate(gradient):
-                    norm = np.linalg.norm(d)
-                    if norm > self.MAX_DELTA_NORM:
-                        gradient[i] = np.multiply(d, self.MAX_DELTA_NORM / norm)
+                # Normalize global batch gradient by dividing by its norm (L2 norm)
+                global_norm = np.sqrt(sum(np.linalg.norm(d) ** 2 for d in gradient))
+                if global_norm > self.MAX_DELTA_NORM:
+                    for i, d in enumerate(gradient):
+                        gradient[i] = np.multiply(
+                            d, self.MAX_DELTA_NORM / (global_norm + EPSILON)
+                        )
 
                 gradient.reverse()
 
@@ -220,6 +236,22 @@ class NeuralNetwork:
         data_evaluate: list[tuple[np.ndarray, str]],
         config: TrainingConfig = TrainingConfig(),
     ) -> None:
+        """
+        Trains the neural network using the provided training and evaluation data.
+
+        Args:
+            data_train (list[tuple[np.ndarray, str]]): The training data, where each element is a
+                tuple containing an input array and its corresponding label.
+            data_evaluate (list[tuple[np.ndarray, str]]): The evaluation data, where each element is a
+                tuple containing an input array and its corresponding label.
+            config (TrainingConfig, optional): Configuration for training.
+
+        Notes:
+            - The method implements early stopping based on the validation loss.
+            - The best weights and biases are stored and restored if early stopping is triggered.
+            - If `config.debug` is True, training and evaluation metrics are printed and stored for plotting.
+            - If `config.store` is True, the trained weights and biases are saved to a file.
+        """
         last_epoch_loss = float("inf")
         patience_counter = 0
 

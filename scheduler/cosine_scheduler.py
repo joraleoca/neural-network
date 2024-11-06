@@ -45,6 +45,11 @@ class CosineScheduler(Scheduler):
         self._initial_lr = self.learning_rate
 
     def update(self, epoch: int) -> None:
+        """
+        Updates the learning rate in-place based on the current epoch using a cosine schedule.
+        Args:
+            epoch (int): The current epoch number.
+        """
         if not self.cyclic and epoch > self.max_steps:
             return  # the learning rate has reached its minimum
 

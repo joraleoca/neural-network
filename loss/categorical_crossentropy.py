@@ -9,6 +9,10 @@ from encode import Encoder, OneHotEncoder
 
 
 class CategoricalCrossentropy(Loss):
+    """
+    Categorical Crossentropy loss.
+    """
+
     @staticmethod
     def loss(
         expected: NDArray[np.floating[Any]],

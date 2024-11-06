@@ -70,7 +70,7 @@ class Normal(Initializator):
 
 class Uniform(Initializator):
     """
-    Initialize the weights for a neural network.
+    Uniform initializer for neural network weights.
     """
 
     def _initializate(

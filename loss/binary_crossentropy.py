@@ -8,6 +8,10 @@ from encode import Encoder, BinaryEncoder
 
 
 class BinaryCrossentropy(Loss):
+    """
+    BinaryCrossentropy loss class for binary classification tasks.
+    """
+
     @staticmethod
     def loss(
         expected: np.floating[Any],

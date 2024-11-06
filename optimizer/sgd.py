@@ -48,7 +48,8 @@ class SGD(Optimizer):
         last_gradients: list[NDArray[np.floating[Any]]],
         iteration: int,
     ) -> list[NDArray[np.floating[Any]]]:
-        """Apply momentum to gradients.
+        """
+        Apply momentum to gradients.
 
         Args:
             gradients: Current gradients
@@ -80,7 +81,8 @@ class SGD(Optimizer):
         params: list[NDArray[np.floating[Any]]],
         gradients: list[NDArray[np.floating[Any]]],
     ) -> None:
-        """Apply gradient updates to parameters.
+        """
+        Apply gradient updates to parameters.
 
         Args:
             params: Parameters to update (weights or biases)
