@@ -87,4 +87,4 @@ Feel free to open issues or submit pull requests if you have suggestions for imp
 
 ## License
 
-This project is licensed under the Apache License 2.0.
+This project is licensed under the MIT License.
