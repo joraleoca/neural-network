@@ -87,4 +87,4 @@ Feel free to open issues or submit pull requests if you have suggestions for imp
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the GNU General Public License v3.0.
