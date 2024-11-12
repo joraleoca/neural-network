@@ -1,10 +1,10 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from .activation import FunctionActivation
+from .activation import ActivationFunction
 
 
-class Relu(FunctionActivation):
+class Relu(ActivationFunction):
     """
     Rectified Linear Unit (ReLU) activation function.
 

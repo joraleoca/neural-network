@@ -6,7 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 
-from activation import FunctionActivation
+from activation import ActivationFunction
 from loss import Loss
 from encode import Encoder
 from optimizer import Optimizer
@@ -41,8 +41,8 @@ class NeuralNetwork:
     num_hidden_layers: Final[int]
 
     # Function activators
-    hidden_activation: FunctionActivation
-    output_activation: FunctionActivation
+    hidden_activation: ActivationFunction
+    output_activation: ActivationFunction
 
     loss: Loss
     encoder: Encoder

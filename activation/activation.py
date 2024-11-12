@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-class FunctionActivation(ABC):
+class ActivationFunction(ABC):
     """
     Abstract base class defining the interface for neural network activation functions.
 
