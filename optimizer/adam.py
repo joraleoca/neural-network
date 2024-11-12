@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any
+
 
 import numpy as np
 from numpy.typing import NDArray
@@ -13,11 +13,11 @@ class Adam(Optimizer):
     b1: float = field(default=0.9, kw_only=True)
     b2: float = field(default=0.999, kw_only=True)
 
-    mw: list[NDArray[np.floating[Any]]] = field(init=False, default_factory=list)
-    vw: list[NDArray[np.floating[Any]]] = field(init=False, default_factory=list)
+    mw: list[NDArray[np.floating]] = field(init=False, default_factory=list)
+    vw: list[NDArray[np.floating]] = field(init=False, default_factory=list)
 
-    mb: list[NDArray[np.floating[Any]]] = field(init=False, default_factory=list)
-    vb: list[NDArray[np.floating[Any]]] = field(init=False, default_factory=list)
+    mb: list[NDArray[np.floating]] = field(init=False, default_factory=list)
+    vb: list[NDArray[np.floating]] = field(init=False, default_factory=list)
 
     _tw: int = field(init=False, default=0)
     _tb: int = field(init=False, default=0)
@@ -32,16 +32,16 @@ class Adam(Optimizer):
     def _optimize(
         self,
         lr: float,
-        gradients: list[NDArray[np.floating[Any]]],
-        params: list[NDArray[np.floating[Any]]],
+        gradients: list[NDArray[np.floating]],
+        params: list[NDArray[np.floating]],
         weights: bool,
     ) -> None:
         """
         Optimizes the parameters using the Adam optimization algorithm.
         Args:
             lr (float): Learning rate.
-            gradients (list[NDArray[np.floating[Any]]]): List of gradients for each parameter.
-            params (list[NDArray[np.floating[Any]]]): List of parameters to be optimized.
+            gradients (list[NDArray[np.floating]]): List of gradients for each parameter.
+            params (list[NDArray[np.floating]]): List of parameters to be optimized.
             weights (bool): Flag indicating whether to update weights or biases.
         Returns:
             None
@@ -75,17 +75,17 @@ class Adam(Optimizer):
     def optimize_weights(
         self,
         lr: float,
-        gradients: list[NDArray[np.floating[Any]]],
+        gradients: list[NDArray[np.floating]],
         *,
-        weights: list[NDArray[np.floating[Any]]],
+        weights: list[NDArray[np.floating]],
     ) -> None:
         return self._optimize(lr, gradients, params=weights, weights=True)
 
     def optimize_biases(
         self,
         lr: float,
-        gradients: list[NDArray[np.floating[Any]]],
+        gradients: list[NDArray[np.floating]],
         *,
-        biases: list[NDArray[np.floating[Any]]],
+        biases: list[NDArray[np.floating]],
     ) -> None:
         return self._optimize(lr, gradients, params=biases, weights=False)

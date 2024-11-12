@@ -1,4 +1,4 @@
-from typing import Final, Any
+from typing import Final
 
 import numpy as np
 from numpy.typing import NDArray
@@ -24,13 +24,13 @@ class OneHotEncoder(Encoder):
         self.classes = classes
         self._label_to_index = {c: i for i, c in enumerate(classes)}
 
-    def encode(self, label: str) -> NDArray[np.floating[Any]]:
+    def encode(self, label: str) -> NDArray[np.floating]:
         """
         Encodes a given label into a one-hot encoded numpy array.
         Args:
             label (str): The label to be encoded.
         Returns:
-            NDArray[np.floating[Any]]: A one-hot encoded numpy array representing the label.
+            NDArray[np.floating]: A one-hot encoded numpy array representing the label.
         Raises:
             ValueError: If the label is not found in the predefined classes.
         """
@@ -43,13 +43,13 @@ class OneHotEncoder(Encoder):
         return encode
 
     def decode(
-        self, encoded: NDArray[np.floating[Any]] | NDArray[np.integer[Any]]
+        self, encoded: NDArray[np.floating] | NDArray[np.integer]
     ) -> str:
         """
         Decodes a one-hot encoded numpy array to its corresponding class label.
         The encoded can also be a probabilities vector.
         Args:
-            encoded (NDArray[np.floating[Any]] | NDArray[np.integer[Any]): A one-hot encoded numpy array.
+            encoded (NDArray[np.floating] | NDArray[np.integer): A one-hot encoded numpy array.
         Returns:
             str: The class label corresponding to the highest value in the encoded array.
         """

@@ -1,4 +1,4 @@
-from typing import Any
+
 
 import numpy as np
 from numpy.typing import NDArray
@@ -15,9 +15,9 @@ class CategoricalCrossentropy(Loss):
 
     @staticmethod
     def loss(
-        expected: NDArray[np.floating[Any]],
-        predicted: NDArray[np.floating[Any]],
-    ) -> np.floating[Any]:
+        expected: NDArray[np.floating],
+        predicted: NDArray[np.floating],
+    ) -> np.floating:
         if expected.shape != predicted.shape:
             raise ValueError(
                 f"Shape mismatch: expected {expected.shape}, got {predicted.shape}"
@@ -38,9 +38,9 @@ class CategoricalCrossentropy(Loss):
 
     @staticmethod
     def gradient(
-        expected: NDArray[np.floating[Any]],
-        predicted: NDArray[np.floating[Any]],
-    ) -> NDArray[np.floating[Any]]:
+        expected: NDArray[np.floating],
+        predicted: NDArray[np.floating],
+    ) -> NDArray[np.floating]:
         if expected.shape != predicted.shape:
             raise ValueError(
                 f"Shape mismatch: expected {expected.shape}, got {predicted.shape}"

@@ -1,4 +1,4 @@
-from typing import Final, Any
+from typing import Final
 from copy import deepcopy
 from pathlib import Path
 
@@ -35,8 +35,8 @@ class NeuralNetwork:
         "params_file",
     )
 
-    weights: list[NDArray[np.floating[Any]]]
-    biases: list[NDArray[np.floating[Any]]]
+    weights: list[NDArray[np.floating]]
+    biases: list[NDArray[np.floating]]
 
     num_hidden_layers: Final[int]
 
@@ -109,14 +109,14 @@ class NeuralNetwork:
         return self.encoder.classes
 
     def forward_pass(
-        self, inputs: NDArray[np.floating[Any]]
-    ) -> NDArray[np.floating[Any]]:
+        self, inputs: NDArray[np.floating]
+    ) -> NDArray[np.floating]:
         """
         Perform a forward pass through the neural network.
         Args:
-            inputs (NDArray[np.floating[Any]]): The input data for the forward pass.
+            inputs (NDArray[np.floating]): The input data for the forward pass.
         Returns:
-            NDArray[np.floating[Any]]: The output of the neural network after the forward pass.
+            NDArray[np.floating]: The output of the neural network after the forward pass.
         """
         if len(inputs) != self.weights[0].shape[1]:
             raise ValueError(
@@ -128,16 +128,16 @@ class NeuralNetwork:
 
     def _forward_pass(
         self,
-        inputs: NDArray[np.floating[Any]],
+        inputs: NDArray[np.floating],
         training: bool = False,
-    ) -> tuple[list[NDArray[np.floating[Any]]], list[NDArray[np.floating[Any]]]]:
+    ) -> tuple[list[NDArray[np.floating]], list[NDArray[np.floating]]]:
         """
         Perform a forward pass through the neural network.
         Args:
-            inputs (NDArray[np.floating[Any]]): The input data for the neural network.
+            inputs (NDArray[np.floating]): The input data for the neural network.
             training (bool): Flag indicating if its training or not
         Returns:
-            (tuple[list[NDArray[np.floating[Any]]], list[NDArray[np.floating[Any]]]]):
+            (tuple[list[NDArray[np.floating]], list[NDArray[np.floating]]]):
                 A tuple containing two lists:
                 - The first list contains the outputs of each layer.
                 - The second list contains the inputs to each layer.
