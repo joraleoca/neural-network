@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
+
 
 import numpy as np
 from numpy.typing import NDArray
@@ -21,11 +21,11 @@ class Dropout:
                 f"The probability of dropout must be between 0 and 1. Got {self.p}."
             )
 
-    def drop(self, layer_output: NDArray[np.floating[Any]]) -> None:
+    def drop(self, layer_output: NDArray[np.floating]) -> None:
         """
         Apply dropout regularization to the given layer output in-place.
         Parameters:
-            layer_output (NDArray[np.floating[Any]]): The output of the layer to which dropout will be applied.
+            layer_output (NDArray[np.floating]): The output of the layer to which dropout will be applied.
         """
         rng = np.random.default_rng()
 

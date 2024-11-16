@@ -1,4 +1,4 @@
-from typing import Any
+
 
 import numpy as np
 
@@ -14,9 +14,9 @@ class BinaryCrossentropy(Loss):
 
     @staticmethod
     def loss(
-        expected: np.floating[Any],
-        predicted: np.floating[Any],
-    ) -> np.floating[Any]:
+        expected: np.floating,
+        predicted: np.floating,
+    ) -> np.floating:
         clipped_predicted = np.clip(predicted, EPSILON, 1 - EPSILON)
 
         ce_loss = -(
@@ -28,9 +28,9 @@ class BinaryCrossentropy(Loss):
 
     @staticmethod
     def gradient(
-        expected: np.floating[Any],
-        predicted: np.floating[Any],
-    ) -> np.floating[Any]:
+        expected: np.floating,
+        predicted: np.floating,
+    ) -> np.floating:
         clipped_predicted = np.clip(predicted, EPSILON, 1 - EPSILON)
 
         return clipped_predicted - expected

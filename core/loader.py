@@ -1,6 +1,6 @@
 from pathlib import Path
 import os
-from typing import Any
+
 
 import numpy as np
 from numpy.typing import NDArray
@@ -35,12 +35,12 @@ class ParameterLoader:
 
     def load(
         self,
-    ) -> tuple[list[NDArray[np.floating[Any]]], list[NDArray[np.floating[Any]]], int]:
+    ) -> tuple[list[NDArray[np.floating]], list[NDArray[np.floating]], int]:
         """
         Load neural network parameters in-place from a specified file path.
 
         Returns:
-            tuple[list[NDArray[np.floating[Any]]], list[NDArray[np.floating[Any]]], int]:
+            tuple[list[NDArray[np.floating]], list[NDArray[np.floating]], int]:
                 [weights, biases, num of hidden layers]
 
         Raises:
@@ -115,7 +115,7 @@ class ParameterLoader:
 
     def _create_weights_biases(
         self, params: dict[str, NDArray]
-    ) -> tuple[list[NDArray[np.floating[Any]]], list[NDArray[np.floating[Any]]]]:
+    ) -> tuple[list[NDArray[np.floating]], list[NDArray[np.floating]]]:
         """
         Creates and validates weights and biases for each layer from the given parameters.
 
@@ -124,7 +124,7 @@ class ParameterLoader:
             The keys should be in the format "weights{i}" and "biases{i}" where {i} is the layer index.
 
         Returns:
-            tuple[list[NDArray[np.floating[Any]]], list[NDArray[np.floating[Any]]]]:
+            tuple[list[NDArray[np.floating]], list[NDArray[np.floating]]]:
             A tuple containing two lists: [weights, biases]
         """
         weights = []

@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any
+
 
 import numpy as np
 from numpy.typing import NDArray
@@ -24,10 +24,10 @@ class SGD(Optimizer):
 
     _iteration_weights: int = field(default=0, init=False)
     _iteration_biases: int = field(default=0, init=False)
-    _last_weights_gradient: list[NDArray[np.floating[Any]]] = field(
+    _last_weights_gradient: list[NDArray[np.floating]] = field(
         default_factory=list, init=False
     )
-    _last_biases_gradient: list[NDArray[np.floating[Any]]] = field(
+    _last_biases_gradient: list[NDArray[np.floating]] = field(
         default_factory=list, init=False
     )
 
@@ -44,10 +44,10 @@ class SGD(Optimizer):
 
     def _apply_momentum(
         self,
-        gradients: list[NDArray[np.floating[Any]]],
-        last_gradients: list[NDArray[np.floating[Any]]],
+        gradients: list[NDArray[np.floating]],
+        last_gradients: list[NDArray[np.floating]],
         iteration: int,
-    ) -> list[NDArray[np.floating[Any]]]:
+    ) -> list[NDArray[np.floating]]:
         """
         Apply momentum to gradients.
 
@@ -78,8 +78,8 @@ class SGD(Optimizer):
     def _apply_update(
         self,
         lr: float,
-        params: list[NDArray[np.floating[Any]]],
-        gradients: list[NDArray[np.floating[Any]]],
+        params: list[NDArray[np.floating]],
+        gradients: list[NDArray[np.floating]],
     ) -> None:
         """
         Apply gradient updates to parameters.
@@ -96,9 +96,9 @@ class SGD(Optimizer):
     def optimize_weights(
         self,
         lr: float,
-        gradients: list[NDArray[np.floating[Any]]],
+        gradients: list[NDArray[np.floating]],
         *,
-        weights: list[NDArray[np.floating[Any]]],
+        weights: list[NDArray[np.floating]],
     ) -> None:
         if self.momentum != 0:
             self._iteration_weights += 1
@@ -111,9 +111,9 @@ class SGD(Optimizer):
     def optimize_biases(
         self,
         lr: float,
-        gradients: list[NDArray[np.floating[Any]]],
+        gradients: list[NDArray[np.floating]],
         *,
-        biases: list[NDArray[np.floating[Any]]],
+        biases: list[NDArray[np.floating]],
     ) -> None:
         if self.momentum != 0:
             self._iteration_biases += 1

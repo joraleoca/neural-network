@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from activation import FunctionActivation
+from activation import ActivationFunction
 from initialization import Initializator, HeUniform
 from loss import Loss, BinaryCrossentropy
 from optimizer import Optimizer, SGD
@@ -17,8 +17,8 @@ class NeuralNetworkConfig:
     Attributes:
         network_structure (list[int]): A list representing the number of nodes in each layer of the network.
         classes (tuple[str, ...]): A tuple containing the class labels for the output layer.
-        hidden_activation (FunctionActivation): The activation function to be used for the hidden layers.
-        output_activation (FunctionActivation): The activation function to be used for the output layer.
+        hidden_activation (ActivationFunction): The activation function to be used for the hidden layers.
+        output_activation (ActivationFunction): The activation function to be used for the output layer.
         loss (Loss): The loss functions.
         initializator (Initializator): The weight initialization strategy.
         optimizer (Optimizer): The optimization algorithm.
@@ -31,8 +31,8 @@ class NeuralNetworkConfig:
     network_structure: list[int]
     classes: tuple[str, ...]
 
-    hidden_activation: FunctionActivation
-    output_activation: FunctionActivation
+    hidden_activation: ActivationFunction
+    output_activation: ActivationFunction
 
     loss: Loss
 

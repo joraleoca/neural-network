@@ -2,7 +2,7 @@
 This module implements various activation functions commonly used in neural networks.
 
 Classes:
-    - FunctionActivation: Abstract base class defining the interface for activation functions
+    - ActivationFunction: Abstract base class defining the interface for activation functions
     - Relu: Implementation of the Rectified Linear Unit activation function
     - LeakyRelu: Implementation of Leaky ReLU with configurable slope for negative values
     - Tanh: Implementation of the Hyperbolic Tangent activation function
@@ -10,11 +10,11 @@ Classes:
     - Sigmoid: Implementation of the Sigmoid (logistic) activation function
 """
 
-from .activation import FunctionActivation
+from .activation import ActivationFunction
 from .relu import Relu
 from .leaky_relu import LeakyRelu
 from .sigmoid import Sigmoid
 from .tanh import Tanh
 from .softmax import Softmax
 
-__all__ = ["FunctionActivation", "Relu", "LeakyRelu", "Sigmoid", "Tanh", "Softmax"]
+__all__ = ["ActivationFunction", "Relu", "LeakyRelu", "Sigmoid", "Tanh", "Softmax"]

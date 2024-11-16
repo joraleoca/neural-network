@@ -1,10 +1,10 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from .activation import FunctionActivation
+from .activation import ActivationFunction
 
 
-class Softmax(FunctionActivation):
+class Softmax(ActivationFunction):
     """
     Softmax activation function for multi-class classification.
 

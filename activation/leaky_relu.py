@@ -1,10 +1,10 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from .activation import FunctionActivation
+from .activation import ActivationFunction
 
 
-class LeakyRelu(FunctionActivation):
+class LeakyRelu(ActivationFunction):
     """
     Leaky Rectified Linear Unit activation function.
 

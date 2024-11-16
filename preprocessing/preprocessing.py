@@ -1,20 +1,20 @@
-from typing import Any
+
 
 import numpy as np
 from numpy.typing import NDArray
 
 
 def min_max_scaler(
-    data: NDArray[np.floating[Any]], min: float, max: float
-) -> NDArray[np.floating[Any]]:
+    data: NDArray[np.floating], min: float, max: float
+) -> NDArray[np.floating]:
     """
     Scales the input data to a specified range [min, max] using min-max normalization.
     Parameters:
-        data (NDArray[np.floating[Any]]): The input data to be scaled. It should be a NumPy array of floating-point numbers.
+        data (NDArray[np.floating]): The input data to be scaled. It should be a NumPy array of floating-point numbers.
         min (float): The minimum value of the desired range.
         max (float): The maximum value of the desired range.
     Returns:
-        NDArray[np.floating[Any]]: The scaled data with values in the range [min, max].
+        NDArray[np.floating]: The scaled data with values in the range [min, max].
     Raises:
         ValueError if min is greater than max
     """
