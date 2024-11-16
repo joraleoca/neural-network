@@ -9,7 +9,7 @@ import tensor
 class Div(Function):
     @staticmethod
     def forward(
-        ctx: Context, a: "tensor.Tensor", b: "tensor.Tensor"
+        ctx: Context, a: "tensor.Tensor", b: "tensor.Tensor", *, inplace: bool = False
     ) -> "tensor.Tensor":
         ctx.data = (a, b)
 
@@ -17,6 +17,10 @@ class Div(Function):
 
         if result_requires_grad:
             ctx.backwards_func = lambda self, grad: Div.backward(self, grad)
+
+        if inplace:
+            a.data[:] /= b.data
+            return a
 
         return tensor.Tensor(
             a.data / b.data,

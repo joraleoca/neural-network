@@ -6,6 +6,31 @@ import tensor.op as op
 from tests.utils import assert_grad
 
 
+def test_neg_backward():
+    """Test the backward computation for the negation operation."""
+
+    a = Tensor([1, -2, 3], dtype=np.float32, requires_grad=True)
+    b = -a
+
+    b.gradient()
+
+    assert_grad(a, -np.ones_like(a))
+
+
+def test_abs_backward():
+    """Test the backward computation for the absolute value operation."""
+
+    a = Tensor([-1, 0, 3], dtype=np.float32, requires_grad=True)
+    b = abs(a)
+
+    b.gradient()
+
+    # -1 for negative, 1 for positive, 0 for 0
+    expected_grad_a = ((a.data > 0) - 1 * (a.data < 0)) * (a.data != 0)
+
+    assert_grad(a, expected_grad_a)
+
+
 def test_add_backward():
     """Test the backward computation for the addition operation."""
 

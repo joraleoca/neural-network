@@ -9,7 +9,9 @@ from ..context import Context
 class Function(ABC):
     @staticmethod
     @abstractmethod
-    def forward(ctx: Context, *args: "tensor.Tensor") -> "tensor.Tensor":
+    def forward(
+        ctx: Context, *args: "tensor.Tensor", inplace: bool = False
+    ) -> "tensor.Tensor":
         pass
 
     @staticmethod

@@ -13,7 +13,7 @@ def assert_grad(arr: Tensor, grad: NDArray) -> None:
     Raises:
         AssertionError: If the gradient of the tensor does not match the expected gradient.
     """
-    assert np.allclose(arr.grad, grad), f"'{arr}' gradient should be {grad}"
+    assert np.allclose(arr.grad, grad), f"'{arr.grad}' should be {grad}"
 
 
 def assert_data(arr: Tensor, data: NDArray) -> None:

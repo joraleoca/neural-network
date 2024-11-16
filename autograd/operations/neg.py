@@ -1,4 +1,3 @@
-import numpy as np
 from numpy.typing import NDArray
 
 from .function import Function
@@ -7,24 +6,26 @@ from ..context import Context
 import tensor
 
 
-class Exp(Function):
+class Neg(Function):
     @staticmethod
     def forward(
         ctx: Context, a: "tensor.Tensor", *, inplace: bool = False
     ) -> "tensor.Tensor":
         ctx.data = (a,)
 
-        if a.requires_grad:
-            ctx.backwards_func = lambda self, grad: Exp.backward(self, grad)
+        result_requires_grad = a.requires_grad
+
+        if result_requires_grad:
+            ctx.backwards_func = lambda self, grad: Neg.backward(self, grad)
 
         if inplace:
-            a.data[:] = np.exp(a.data)
+            a.data[:] = -a.data
             return a
 
         return tensor.Tensor(
-            np.exp(a.data),
+            -a.data,
             dtype=a.dtype,
-            requires_grad=a.requires_grad,
+            requires_grad=result_requires_grad,
         )
 
     @staticmethod
@@ -32,4 +33,4 @@ class Exp(Function):
         a = ctx.data[0]
 
         if a.requires_grad:
-            a.grad += grad * np.exp(a.data)
+            a.grad -= grad

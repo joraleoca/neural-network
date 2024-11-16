@@ -19,6 +19,18 @@ def test_tensor_creation_with_grad():
     assert tensor.requires_grad
 
 
+def test_tensor_negation():
+    tensor = Tensor([1, -2, 3], dtype=np.float32)
+    result = -tensor
+    assert_data(result, np.array([-1, 2, -3], dtype=np.float32))
+
+
+def test_tensor_absolute_value():
+    tensor = Tensor([-1, -2, 3], dtype=np.float32)
+    result = abs(tensor)
+    assert_data(result, np.array([1, 2, 3], dtype=np.float32))
+
+
 def test_tensor_addition():
     tensor1 = Tensor([1, 2, 3], dtype=np.float32)
     tensor2 = Tensor([4, 5, 6], dtype=np.float32)
