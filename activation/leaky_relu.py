@@ -1,7 +1,7 @@
 import numpy as np
-from numpy.typing import NDArray
 
 from .activation import ActivationFunction
+from core import Tensor
 
 
 class LeakyRelu(ActivationFunction):
@@ -22,16 +22,13 @@ class LeakyRelu(ActivationFunction):
     def __init__(self, *, alpha: float = 0.01) -> None:
         """
         Initialize LeakyRelu with given alpha parameter.
-
         Args:
             alpha: Slope for negative values. Must be positive.
         """
+        if alpha <= 0:
+            raise ValueError(f"Alpha must be positive. Got {alpha}")
+
         self.ALPHA = alpha
 
-    def activate(self, data: NDArray) -> NDArray:
-        self._validate_input(data)
-        return np.where(data > 0, data, self.ALPHA * data)
-
-    def derivative(self, data: NDArray) -> NDArray:
-        self._validate_input(data)
-        return np.where(data > 0, 1, self.ALPHA)
+    def __call__(self, arr: Tensor) -> Tensor:
+        return arr * np.where(arr > 0, 1, self.ALPHA)

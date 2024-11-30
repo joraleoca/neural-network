@@ -6,6 +6,7 @@ A simple implementation of a neural network from scratch in Python for classific
 
 - Feed-forward neural network implementation
 - Flexible architecture that can work with various datasets
+- Automatic differentiation using autograd for gradient computation
 - Data visualization capabilities
 
 ## Installation

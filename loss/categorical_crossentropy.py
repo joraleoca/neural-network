@@ -1,10 +1,7 @@
-
-
 import numpy as np
-from numpy.typing import NDArray
 
 from .loss import Loss
-from core.constants import EPSILON
+from core import Tensor, op, constants as c
 from encode import Encoder, OneHotEncoder
 
 
@@ -13,48 +10,42 @@ class CategoricalCrossentropy(Loss):
     Categorical Crossentropy loss.
     """
 
-    @staticmethod
-    def loss(
-        expected: NDArray[np.floating],
-        predicted: NDArray[np.floating],
-    ) -> np.floating:
+    __slots__ = ["smoothing_factor"]
+
+    smoothing_factor: float
+
+    def __init__(self, smoothing_factor: float = 0):
+        if not 0 <= smoothing_factor <= 1:
+            raise ValueError("Smoothing factor must be between 0 and 1 (inclusive)")
+        self.smoothing_factor = smoothing_factor
+
+    def __call__(
+        self,
+        expected: Tensor[np.floating],
+        predicted: Tensor[np.floating],
+    ) -> Tensor[np.floating]:
         if expected.shape != predicted.shape:
             raise ValueError(
                 f"Shape mismatch: expected {expected.shape}, got {predicted.shape}"
             )
 
-        clipped_predicted = np.clip(predicted, EPSILON, 1 - EPSILON)
+        # Clipping
+        predicted.data = np.clip(predicted.data, c.EPSILON, 1 - c.EPSILON)
+        expected = Tensor(
+            np.clip(expected.data, c.EPSILON, 1 - c.EPSILON), dtype=expected.dtype
+        )
 
         # Apply label smoothing to the expected output
-        smoothing_factor = 0.1
-        smoothed_expected = expected * (1 - smoothing_factor) + (
-            smoothing_factor / len(expected)
-        )
+        if self.smoothing_factor != 0:
+            num_classes = expected.shape[0]
+            expected = expected * (1 - self.smoothing_factor) + (
+                self.smoothing_factor / num_classes
+            )
 
         # Calculate cross-entropy loss
-        ce_loss = -np.sum(smoothed_expected * np.log(clipped_predicted))
+        ce_loss = -op.sum(expected * op.log(predicted), axis=-1)
 
-        return ce_loss
-
-    @staticmethod
-    def gradient(
-        expected: NDArray[np.floating],
-        predicted: NDArray[np.floating],
-    ) -> NDArray[np.floating]:
-        if expected.shape != predicted.shape:
-            raise ValueError(
-                f"Shape mismatch: expected {expected.shape}, got {predicted.shape}"
-            )
-
-        clipped_predicted = np.clip(predicted, EPSILON, 1 - EPSILON)
-
-        # Apply label smoothing to the expected output
-        smoothing_factor = 0.1
-        smoothed_expected = expected * (1 - smoothing_factor) + (
-            smoothing_factor / len(expected)
-        )
-
-        return clipped_predicted - smoothed_expected
+        return ce_loss  # type: ignore
 
     @staticmethod
     def encoder() -> type[Encoder]:

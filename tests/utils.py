@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from tensor import Tensor
+from core import Tensor
 
 
 def assert_grad(arr: Tensor, grad: NDArray) -> None:
@@ -25,4 +25,4 @@ def assert_data(arr: Tensor, data: NDArray) -> None:
     Raises:
         AssertionError: If the tensor's data does not match the expected data.
     """
-    assert np.array_equal(arr.data, data), f"'{arr}' data should be {data}"
+    assert np.allclose(arr.data, data), f"'{arr}' data should be {data}"

@@ -5,7 +5,7 @@ from initialization import Initializator, HeUniform
 from loss import Loss, BinaryCrossentropy
 from optimizer import Optimizer, SGD
 from regularization import Dropout
-from core import ParameterLoader
+from core.loader import ParameterLoader
 
 
 @dataclass(slots=True)

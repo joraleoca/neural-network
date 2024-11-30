@@ -1,4 +1,7 @@
+import numpy as np
+
 from .encoder import Encoder
+from core import Tensor
 
 
 class BinaryEncoder(Encoder):
@@ -11,7 +14,6 @@ class BinaryEncoder(Encoder):
     def __post_init__(self):
         """
         Post-initialization method to validate the number of classes.
-
         Raises:
             ValueError: If the number of classes is not equal to 2.
         """
@@ -23,23 +25,21 @@ class BinaryEncoder(Encoder):
     def encode(self, label: str) -> int:
         """
         Encodes a given label into a binary value.
-
         Args:
             label (str): The label to encode.
-
         Returns:
             int: The index of the label in the classes list.
         """
         return self.classes.index(label)
 
-    def decode(self, encoded: int | float) -> str:
+    def decode(self, encoded: Tensor[np.integer] | Tensor[np.floating]) -> str:
         """
         Decodes back to its corresponding class label.
 
         Args:
-            encoded (int | float): The encoded value to decode. It can be a probability.
+            encoded (Tensor[int] | Tensor[float]): The encoded value to decode. It can be a probability.
 
         Returns:
             str: The decoded class label corresponding to the encoded value.
         """
-        return self.classes[round(encoded)]
+        return self.classes[round(encoded.item())]

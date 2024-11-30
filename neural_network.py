@@ -3,17 +3,17 @@ from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike
 import matplotlib.pyplot as plt
 
+from config import NeuralNetworkConfig, TrainingConfig
+from core import ParameterLoadError, Tensor, op, constants as c
+
 from activation import ActivationFunction
-from loss import Loss
+from loss import Loss, CategoricalCrossentropy
 from encode import Encoder
 from optimizer import Optimizer
-from config import NeuralNetworkConfig, TrainingConfig
 from regularization import Dropout
-from core import ParameterLoadError
-from core.constants import FILE_NAME, WEIGHT_PREFIX, BIAS_PREFIX, EPSILON
 
 
 class NeuralNetwork:
@@ -35,8 +35,8 @@ class NeuralNetwork:
         "params_file",
     )
 
-    weights: list[NDArray[np.floating]]
-    biases: list[NDArray[np.floating]]
+    weights: list[Tensor[np.floating]]
+    biases: list[Tensor[np.floating]]
 
     num_hidden_layers: Final[int]
 
@@ -72,15 +72,15 @@ class NeuralNetwork:
         self.optimizer = config.optimizer
         self.batch_size = config.batch_size
         self.dropout = config.dropout
-        self.params_file = FILE_NAME
+        self.params_file = c.FILE_NAME
 
         # Parameters initialization
         if not config.loader:
-            self.weights = config.initializator.initializate(
+            self.weights = config.initializator.initialize(
                 config.network_structure, rng=np.random.default_rng(config.random_seed)
             )
             self.biases = [
-                np.zeros((config.network_structure[i + 1], 1))
+                op.zeros((config.network_structure[i + 1], 1), requires_grad=True)
                 for i in range(len(config.network_structure) - 1)
             ]
         else:
@@ -108,141 +108,75 @@ class NeuralNetwork:
         """
         return self.encoder.classes
 
-    def forward_pass(
-        self, inputs: NDArray[np.floating]
-    ) -> NDArray[np.floating]:
+    def forward_pass(self, inputs: Tensor[np.floating]) -> Tensor[np.floating]:
         """
         Perform a forward pass through the neural network.
         Args:
-            inputs (NDArray[np.floating]): The input data for the forward pass.
+            inputs (Tensor[np.floating]): The input data for the forward pass.
         Returns:
-            NDArray[np.floating]: The output of the neural network after the forward pass.
+            Tensor[np.floating]: The output of the neural network after the forward pass.
         """
         if len(inputs) != self.weights[0].shape[1]:
             raise ValueError(
                 f"Input size {len(inputs)} does not match expected size {self.weights[0].shape[1]}"
             )
 
-        output, _ = self._forward_pass(inputs)
-        return output[-1]
+        return self._forward_pass(inputs)[-1]
 
     def _forward_pass(
         self,
-        inputs: NDArray[np.floating],
+        inputs: Tensor[np.floating],
         training: bool = False,
-    ) -> tuple[list[NDArray[np.floating]], list[NDArray[np.floating]]]:
+    ) -> list[Tensor[np.floating]]:
         """
         Perform a forward pass through the neural network.
         Args:
-            inputs (NDArray[np.floating]): The input data for the neural network.
+            inputs (Tensor[np.floating]): The input data for the neural network.
             training (bool): Flag indicating if its training or not
         Returns:
-            (tuple[list[NDArray[np.floating]], list[NDArray[np.floating]]]):
-                A tuple containing two lists:
-                - The first list contains the outputs of each layer.
-                - The second list contains the inputs to each layer.
+            list[Tensor[np.floating]]: The output of each layer of the neural network.
         """
-        layer_inputs = []
-        layer_outputs = [inputs.reshape(-1, 1)]
+        layer_outputs = [inputs.reshape((-1, 1))]
 
         for i in range(self.num_hidden_layers + 1):
             z = (self.weights[i] @ layer_outputs[-1]) + self.biases[i]
-            layer_inputs.append(z)
 
             if i != self.num_hidden_layers:
-                activation = self.hidden_activation.activate(z)
+                activation = self.hidden_activation(z)
                 if self.dropout and training:
-                    self.dropout.drop(activation)
+                    self.dropout(activation)
             else:
-                activation = self.output_activation.activate(z)
+                activation = self.output_activation(z)
 
             layer_outputs.append(activation)
 
-        return layer_outputs, layer_inputs
+        return layer_outputs
 
-    def _backwards(
-        self, lr: float, data: list[tuple[np.ndarray, str]]
-    ) -> list[np.floating]:
-        """
-        Perform the backward pass of the neural network, updating weights and biases.
-        Args:
-            data (list[tuple[np.ndarray, str]]): A list of tuples where each tuple contains
-                an input array and the corresponding expected label.
-        Returns:
-            list[np.floating]: The losses of the training.
-        """
-        data_array = np.array(data, dtype=object)
-        n_batches = (len(data_array) + self.batch_size - 1) // self.batch_size
-        batches = np.array_split(data_array, n_batches)
+    @staticmethod
+    def _set_requires_grad(
+        data: list[tuple[Tensor | ArrayLike, str]],
+    ) -> list[tuple[Tensor, str]]:
+        for i, item in enumerate(data):
+            if isinstance(item[0], Tensor):
+                item[0].requires_grad = True
+            else:
+                data[i] = (Tensor(item[0], requires_grad=True), item[1])
 
-        losses = []
-
-        for data_batch in batches:
-            weights_batch_gradient = [np.zeros_like(w) for w in self.weights]
-            biases_batch_gradient = [np.zeros_like(b) for b in self.biases]
-
-            for inputs, expected_label in data_batch:
-                expected = self.encoder(expected_label)
-                outputs_layers, inputs_layers = self._forward_pass(
-                    inputs, training=True
-                )
-                predicted = outputs_layers[-1]
-
-                losses.append(self.loss(expected, predicted))
-
-                gradient = [self.loss.gradient(expected, predicted)]
-
-                for i in reversed(range(len(self.weights) - 1)):
-                    gradient.append(
-                        (self.weights[i + 1].T @ gradient[-1])
-                        * self.hidden_activation.derivative(inputs_layers[i])
-                    )
-
-                # Normalize global batch gradient by dividing by its norm (L2 norm)
-                global_norm = np.sqrt(sum(np.linalg.norm(d) ** 2 for d in gradient))
-                if global_norm > self.MAX_DELTA_NORM:
-                    for i, d in enumerate(gradient):
-                        gradient[i] = np.multiply(
-                            d, self.MAX_DELTA_NORM / (global_norm + EPSILON)
-                        )
-
-                gradient.reverse()
-
-                for i, g in enumerate(gradient):
-                    weights_batch_gradient[i] += g @ outputs_layers[i].T
-                    biases_batch_gradient[i] += g
-
-            batch_size = len(data_batch)
-            weights_batch_gradient = [w / batch_size for w in weights_batch_gradient]
-            biases_batch_gradient = [b / batch_size for b in biases_batch_gradient]
-
-            # Update the parameters based on the gradient
-            self.optimizer.optimize_weights(
-                lr,
-                weights_batch_gradient,
-                weights=self.weights,
-            )
-            self.optimizer.optimize_biases(
-                lr,
-                biases_batch_gradient,
-                biases=self.biases,
-            )
-
-        return losses
+        return data  # type: ignore
 
     def train(
         self,
-        data_train: list[tuple[np.ndarray, str]],
-        data_evaluate: list[tuple[np.ndarray, str]],
+        data_train: list[tuple[Tensor | ArrayLike, str]],
+        data_evaluate: list[tuple[Tensor | ArrayLike, str]],
         config: TrainingConfig = TrainingConfig(),
     ) -> None:
         """
         Trains the neural network using the provided training and evaluation data.
 
         Args:
-            data_train (list[tuple[np.ndarray, str]]): The training data, where each element is a
+            data_train (list[tuple[Tensor, str]]): The training data, where each element is a
                 tuple containing an input array and its corresponding label.
-            data_evaluate (list[tuple[np.ndarray, str]]): The evaluation data, where each element is a
+            data_evaluate (list[tuple[Tensor, str]]): The evaluation data, where each element is a
                 tuple containing an input array and its corresponding label.
             config (TrainingConfig, optional): Configuration for training.
 
@@ -252,6 +186,14 @@ class NeuralNetwork:
             - If `config.debug` is True, training and evaluation metrics are printed and stored for plotting.
             - If `config.store` is True, the trained weights and biases are saved to a file.
         """
+        # Set requires_grad to True for all input data
+        d_train = self._set_requires_grad(data_train)
+        d_evaluate = self._set_requires_grad(data_evaluate)
+
+        for w, b in zip(self.weights, self.biases):
+            w.requires_grad = True
+            b.requires_grad = True
+
         last_epoch_loss = float("inf")
         patience_counter = 0
 
@@ -262,10 +204,10 @@ class NeuralNetwork:
         best_accuracy = 0.0
 
         for epoch in range(config.epochs + 1):
-            loss = self._backwards(config.lr.learning_rate, data_train)
+            loss = self._backward(config.lr.learning_rate, d_train)
             current_epoch_loss = np.mean(loss)
 
-            val_accuracy = self.evaluate(data_evaluate)
+            val_accuracy = self.evaluate(d_evaluate)
 
             if val_accuracy >= best_accuracy:
                 best_accuracy = val_accuracy
@@ -285,7 +227,7 @@ class NeuralNetwork:
             config.lr.update(epoch)
 
             if config.debug:
-                train_accuracy = self.evaluate(data_train)
+                train_accuracy = self.evaluate(d_train)
                 # Store metrics for plotting
                 metrics["losses"].append(current_epoch_loss)
                 metrics["test_acc"].append(val_accuracy)
@@ -301,20 +243,97 @@ class NeuralNetwork:
         self.biases = best_biases
 
         if config.store:
-            kwds = {f"{WEIGHT_PREFIX}{i}": w for i, w in enumerate(self.weights)}
-            kwds.update({f"{BIAS_PREFIX}{i}": b for i, b in enumerate(self.biases)})
+            kwds = {f"{c.WEIGHT_PREFIX}{i}": w for i, w in enumerate(self.weights)}
+            kwds.update({f"{c.BIAS_PREFIX}{i}": b for i, b in enumerate(self.biases)})
 
             np.savez(self.params_file, **kwds)
 
         if config.debug:
             self._plot_metrics_train(**metrics)
 
-    def evaluate(self, data: list[tuple[np.ndarray, str]]) -> float:
+        for w, b in zip(self.weights, self.biases):
+            w.requires_grad = False
+            b.requires_grad = False
+
+    def _backward(
+        self, lr: float, data: list[tuple[Tensor, str]]
+    ) -> list[Tensor[np.floating]]:
+        """
+        Perform the backward pass of the neural network, updating weights and biases.
+        Args:
+            data (list[tuple[Tensor, str]]): A list of tuples where each tuple contains
+                an input array and the corresponding expected label.
+        Returns:
+            list[np.floating]: The losses of the training.
+        """
+        data_array = np.array(data, dtype=object)
+        n_batches = (len(data_array) + self.batch_size - 1) // self.batch_size
+        batches = np.array_split(data_array, n_batches)
+
+        losses: list[Tensor] = []
+
+        for data_batch in batches:
+            weights_batch_gradient = [op.zeros_like(w) for w in self.weights]
+            biases_batch_gradient = [op.zeros_like(b) for b in self.biases]
+
+            for inputs, expected_label in data_batch:
+                expected = self.encoder(expected_label)
+                outputs_layers = self._forward_pass(inputs, training=True)
+                predicted = outputs_layers[-1]
+
+                loss = None
+                if isinstance(self.loss, CategoricalCrossentropy):
+                    # This approach is used because the current autograd implementation does not support
+                    # the computation of the Jacobian matrix, which is necessary for calculating the gradient.
+                    # TODO: Implement the Jacobian matrix in the autograd system and remove this workaround.
+                    # This approach is functional until the Jacobian matrix support is added.
+                    loss = op.cce(outputs_layers[-1], expected)
+                else:
+                    loss = self.loss(expected, predicted)
+
+                losses.append(loss)
+
+                loss.backward()
+
+                for i, (w, b) in enumerate(zip(self.weights, self.biases)):
+                    weights_batch_gradient[i] += w.grad
+                    biases_batch_gradient[i] += b.grad
+
+                    w.clear_grad()
+                    b.clear_grad()
+
+            batch_size = len(data_batch)
+
+            for i, (w, b) in enumerate(
+                zip(weights_batch_gradient, biases_batch_gradient)
+            ):
+                weight_norm = np.linalg.norm(w)
+                if weight_norm > self.MAX_DELTA_NORM:
+                    w *= self.MAX_DELTA_NORM / (weight_norm + c.EPSILON)
+
+                weights_batch_gradient[i] = w / batch_size
+                biases_batch_gradient[i] = b / batch_size
+
+            # Update the parameters based on the gradient
+            self.optimizer.optimize_weights(
+                lr,
+                weights_batch_gradient,
+                weights=self.weights,
+            )
+            self.optimizer.optimize_biases(
+                lr,
+                biases_batch_gradient,
+                biases=self.biases,
+            )
+
+        return losses
+
+    def evaluate(self, data: list[tuple[Tensor, str]]) -> float:
         """
         Evaluate the performance of the neural network on a given dataset.
 
         Args:
-            data (list[tuple[np.ndarray, str]]): A list of tuples where each tuple contains an input
+            data (list[tuple[Tensor, str]]): A list of tuples where each tuple contains an input
                              array and the corresponding label.
 
         Returns:
@@ -322,17 +341,14 @@ class NeuralNetwork:
                proportion of correctly classified inputs.
         """
 
-        def simplify_array(arr: NDArray):
-            return arr.item() if arr.size == 1 else arr
-
         correct = sum(
-            self.encoder.decode(simplify_array(self.forward_pass(input))) == label
+            self.encoder.decode(self.forward_pass(input)) == label
             for input, label in data
         )
         return correct / len(data)
 
+    @staticmethod
     def _plot_metrics_train(
-        self,
         losses: list[float],
         test_acc: list[float],
         train_acc: list[float],

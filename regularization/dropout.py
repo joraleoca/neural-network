@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-
 import numpy as np
-from numpy.typing import NDArray
+
+from core import Tensor
 
 
 @dataclass(slots=True)
@@ -21,13 +21,14 @@ class Dropout:
                 f"The probability of dropout must be between 0 and 1. Got {self.p}."
             )
 
-    def drop(self, layer_output: NDArray[np.floating]) -> None:
+    def __call__(self, layer_output: Tensor[np.floating]) -> Tensor[np.floating]:
         """
-        Apply dropout regularization to the given layer output in-place.
+        Apply dropout regularization to the given layer output.
         Parameters:
-            layer_output (NDArray[np.floating]): The output of the layer to which dropout will be applied.
+            layer_output (Tensor[np.floating]): The output of the layer to which dropout will be applied.
         """
         rng = np.random.default_rng()
 
         mask = rng.binomial(1, 1 - self.p, size=layer_output.shape) / (1 - self.p)
-        layer_output[:] *= mask
+
+        return layer_output * mask

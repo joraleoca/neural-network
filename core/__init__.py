@@ -1,12 +1,23 @@
 """
 This module implements the core functionality for the neural network project.
 
-It includes:
-- ParameterLoader: A class responsible for loading parameters.
-- ParameterLoadError: An exception raised when there is an error in loading parameters.
+Modules:
+    - constants: A module containing constants used throughout the project.
+    - op: A module containing operations for the Tensor class.
+
+Classes:
+    - ParameterLoader: A class responsible for loading parameters.
+    - ParameterLoadError: An exception raised when there is an error in loading parameters.
 """
 
-from .loader import ParameterLoader
-from .exceptions import ParameterLoadError
+from . import constants
+from .tensor import op, Tensor
+from .loader import ParameterLoader, ParameterLoadError
 
-__all__ = ["ParameterLoader", "ParameterLoadError"]
+__all__ = [
+    "ParameterLoader",
+    "ParameterLoadError",
+    "constants",
+    "Tensor",
+    "op",
+]

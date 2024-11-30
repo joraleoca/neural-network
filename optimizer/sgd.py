@@ -1,11 +1,10 @@
 from copy import deepcopy
 from dataclasses import dataclass, field
 
-
 import numpy as np
-from numpy.typing import NDArray
 
 from .optimizer import Optimizer
+from core import Tensor
 
 
 @dataclass(slots=True)
@@ -24,10 +23,10 @@ class SGD(Optimizer):
 
     _iteration_weights: int = field(default=0, init=False)
     _iteration_biases: int = field(default=0, init=False)
-    _last_weights_gradient: list[NDArray[np.floating]] = field(
+    _last_weights_gradient: list[Tensor[np.floating]] = field(
         default_factory=list, init=False
     )
-    _last_biases_gradient: list[NDArray[np.floating]] = field(
+    _last_biases_gradient: list[Tensor[np.floating]] = field(
         default_factory=list, init=False
     )
 
@@ -44,10 +43,10 @@ class SGD(Optimizer):
 
     def _apply_momentum(
         self,
-        gradients: list[NDArray[np.floating]],
-        last_gradients: list[NDArray[np.floating]],
+        gradients: list[Tensor[np.floating]],
+        last_gradients: list[Tensor[np.floating]],
         iteration: int,
-    ) -> list[NDArray[np.floating]]:
+    ) -> list[Tensor[np.floating]]:
         """
         Apply momentum to gradients.
 
@@ -78,8 +77,8 @@ class SGD(Optimizer):
     def _apply_update(
         self,
         lr: float,
-        params: list[NDArray[np.floating]],
-        gradients: list[NDArray[np.floating]],
+        params: list[Tensor[np.floating]],
+        gradients: list[Tensor[np.floating]],
     ) -> None:
         """
         Apply gradient updates to parameters.
@@ -89,16 +88,18 @@ class SGD(Optimizer):
             gradients: Gradients to apply
         """
         for i in reversed(range(len(params))):
+            params[i].requires_grad = False
             if self.weight_decay > 0:
                 params[i] *= 1 - self.weight_decay
             params[i] -= lr * gradients[i]
+            params[i].requires_grad = True
 
     def optimize_weights(
         self,
         lr: float,
-        gradients: list[NDArray[np.floating]],
+        gradients: list[Tensor[np.floating]],
         *,
-        weights: list[NDArray[np.floating]],
+        weights: list[Tensor[np.floating]],
     ) -> None:
         if self.momentum != 0:
             self._iteration_weights += 1
@@ -111,9 +112,9 @@ class SGD(Optimizer):
     def optimize_biases(
         self,
         lr: float,
-        gradients: list[NDArray[np.floating]],
+        gradients: list[Tensor[np.floating]],
         *,
-        biases: list[NDArray[np.floating]],
+        biases: list[Tensor[np.floating]],
     ) -> None:
         if self.momentum != 0:
             self._iteration_biases += 1

@@ -1,5 +1,3 @@
-
-
 import numpy as np
 from numpy.typing import NDArray
 
@@ -46,7 +44,7 @@ def train_test_split(
             If float, represents the proportion of the dataset to include in the test split.\n
             If None, the value is set to the complement of train_size.
         random_state: Controls the shuffling applied to the data before applying the split.
-        shuffle (bool, optional): Whether or not to shuffle the data before splitting. Default is True.
+        shuffle (bool, optional): Whether to shuffle the data before splitting. Default is True.
     Returns:
         tuple[NDArray, NDArray]: A tuple containing the training data and the testing data in that order.
     Raises:

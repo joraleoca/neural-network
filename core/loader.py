@@ -1,12 +1,11 @@
 from pathlib import Path
 import os
 
-
 import numpy as np
 from numpy.typing import NDArray
 
 from .exceptions import ParameterLoadError
-from core.constants import FILE_NAME, WEIGHT_PREFIX, BIAS_PREFIX
+from core import Tensor, constants as c
 
 
 class ParameterLoader:
@@ -19,7 +18,7 @@ class ParameterLoader:
 
     path: Path
 
-    def __init__(self, path: str | os.PathLike = FILE_NAME):
+    def __init__(self, path: str | os.PathLike = c.FILE_NAME):
         """
         Initializes the loader with the given file path.
 
@@ -35,12 +34,12 @@ class ParameterLoader:
 
     def load(
         self,
-    ) -> tuple[list[NDArray[np.floating]], list[NDArray[np.floating]], int]:
+    ) -> tuple[list[Tensor[np.floating]], list[Tensor[np.floating]], int]:
         """
         Load neural network parameters in-place from a specified file path.
 
         Returns:
-            tuple[list[NDArray[np.floating]], list[NDArray[np.floating]], int]:
+            tuple[list[Tensor[np.floating]], list[Tensor[np.floating]], int]:
                 [weights, biases, num of hidden layers]
 
         Raises:
@@ -115,7 +114,7 @@ class ParameterLoader:
 
     def _create_weights_biases(
         self, params: dict[str, NDArray]
-    ) -> tuple[list[NDArray[np.floating]], list[NDArray[np.floating]]]:
+    ) -> tuple[list[Tensor[np.floating]], list[Tensor[np.floating]]]:
         """
         Creates and validates weights and biases for each layer from the given parameters.
 
@@ -124,7 +123,7 @@ class ParameterLoader:
             The keys should be in the format "weights{i}" and "biases{i}" where {i} is the layer index.
 
         Returns:
-            tuple[list[NDArray[np.floating]], list[NDArray[np.floating]]]:
+            tuple[list[Tensor[np.floating]], list[Tensor[np.floating]]]:
             A tuple containing two lists: [weights, biases]
         """
         weights = []
@@ -132,14 +131,14 @@ class ParameterLoader:
 
         prev_output_size: int | None = None
         for i in range(len(params) // 2):
-            weight = params[f"{WEIGHT_PREFIX}{i}"]
-            bias = params[f"{BIAS_PREFIX}{i}"]
+            weight = params[f"{c.WEIGHT_PREFIX}{i}"]
+            bias = params[f"{c.BIAS_PREFIX}{i}"]
 
             self._validate_layer_params(i, weight, bias, prev_output_size)
 
             prev_output_size = weight.shape[0]
-            weights.append(weight)
-            biases.append(bias)
+            weights.append(Tensor(weight))
+            biases.append(Tensor(bias))
 
         return weights, biases
 

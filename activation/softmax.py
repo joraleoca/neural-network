@@ -1,7 +1,7 @@
 import numpy as np
-from numpy.typing import NDArray
 
 from .activation import ActivationFunction
+from core import Tensor, op
 
 
 class Softmax(ActivationFunction):
@@ -10,16 +10,10 @@ class Softmax(ActivationFunction):
 
     Computes the function: f(x_i) = exp(x_i) / Σ(exp(x_j))
     where the sum is over all elements j.
-
-    Note:
-        The derivative is not implemented as it's typically combined
-        with cross-entropy loss for better numerical stability.
     """
 
-    def activate(self, data: NDArray) -> NDArray:
-        self._validate_input(data)
-        exp_shifted = np.exp(data - np.max(data, axis=0, keepdims=True))
-        return exp_shifted / np.sum(exp_shifted, axis=0, keepdims=True)
+    def __call__(self, arr: Tensor) -> Tensor:
+        exp_shifted = op.exp(arr - np.max(arr.data))
+        softmax = exp_shifted / op.sum(exp_shifted)
 
-    def derivative(self, data: NDArray) -> NDArray:
-        raise NotImplementedError("Softmax derivative is not implemented")
+        return softmax
