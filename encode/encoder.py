@@ -5,8 +5,6 @@ from typing import Any
 class Encoder[T](ABC):
     """
     Encoder is an abstract base class that defines the structure for encoding labels into a specific format.
-    Attributes:
-        classes (tuple[str, ...]): A tuple containing the classes that can be encoded.
     """
 
     classes: tuple[str, ...]

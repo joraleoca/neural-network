@@ -5,6 +5,8 @@ from ... import tensor
 
 
 class Sum(Function):
+    """Function that computes the sum of a tensor."""
+
     __slots__ = ["axis", "keepdims"]
 
     def __init__(

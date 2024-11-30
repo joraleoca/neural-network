@@ -5,6 +5,8 @@ from ... import tensor
 
 
 class Tanh(Function):
+    """Function that computes the element-wise tangent of a tensor."""
+
     def __init__(self, a: "tensor.Tensor") -> None:
         self.args = (a,)
 

@@ -3,6 +3,8 @@ from ... import tensor
 
 
 class Abs(Function):
+    """Function that computes the element-wise absolute value of a tensor."""
+
     def __init__(self, a: "tensor.Tensor") -> None:
         self.args = (a,)
 

@@ -217,22 +217,29 @@ class Tensor(MutableSequence[T]):
 
     @property
     def dtype(self) -> np.dtype:
+        """Returns the data type (dtype) of the tensor."""
         return self.data.dtype
 
     @property
     def shape(self) -> tuple[int, ...]:
+        """Returns the shape of the tensor."""
         return self.data.shape
 
     @property
     def ndim(self) -> int:
+        """Returns the number of dimensions of the tensor."""
         return self.data.ndim
 
     @property
     def size(self) -> int:
+        """Returns the number of elements in the tensor."""
         return self.data.size
 
     @property
     def requires_grad(self) -> bool:
+        """
+        Gets or sets the flag indicating whether the tensor requires gradient tracking.
+        """
         return self._requires_grad
 
     @requires_grad.setter
@@ -249,6 +256,7 @@ class Tensor(MutableSequence[T]):
         self._requires_grad = requires_grad
 
     def item(self) -> T:
+        """Returns the value of the tensor as a standard Python scalar."""
         return self.data.item()
 
     def sum(
@@ -272,11 +280,13 @@ class Tensor(MutableSequence[T]):
     def max(self, axis: SupportsIndex | None = None, keepdims: bool = False):
         """
         Computes the maximum value of tensor elements over the specified axis.
+
         Args:
             axis : SupportsIndex | None, optional
                 Axis or axes along which the maximum is computed. The default, axis=None, will find the maximum element in the tensor.
             keepdims : bool, optional
                 If True, the reduced axes are left in the result as dimensions with size one. Default is False.
+
         Returns:
             Tensor[T] | T:
                 A tensor with the maximum value of elements along the specified axis. If no axis is specified, returns the maximum element as a scalar.
@@ -288,8 +298,10 @@ class Tensor(MutableSequence[T]):
     def reshape(self, shape: tuple[int, ...]) -> "Tensor[T]":
         """
         Returns a new tensor with the same data but a different shape.
+
         Args:
             shape (tuple[int, ...]): The new shape of the tensor.
+
         Returns:
             Tensor: A new tensor with the specified shape.
         """
@@ -300,9 +312,11 @@ class Tensor(MutableSequence[T]):
     ) -> "Tensor[T]":
         """
         Applies a specified operation between the current tensor and another tensor.
+
         Args:
             operation (type[Function]): The operation to apply.
             inplace (bool): If True, the operation is applied in place, modifying the current tensor.
+
         Returns:
             Tensor: The result of the operation, either a new tensor or the modified current tensor.
         """
@@ -320,7 +334,9 @@ class Tensor(MutableSequence[T]):
 
     def backward(self) -> None:
         """
-        Computes the gradient of the tensor.
+        Computes the gradient of the tensor.\n
+        The tensor must have requires_grad set to True.\n
+        The gradient is stored in the grad attribute.\n
         """
         if not self._requires_grad:
             return
@@ -338,6 +354,12 @@ class Tensor(MutableSequence[T]):
                 graph.done(node)
 
     def _grad_graph(self) -> TopologicalSorter[Function]:
+        """
+        Creates a graph of the gradient operations for the tensor.
+
+        Returns:
+            TopologicalSorter[Function]: A graph of the gradient operations.
+        """
         graph = TopologicalSorter()
         graph.add(self._grad_operation)
         visited: deque[Tensor] = deque([self])
@@ -365,4 +387,5 @@ class Tensor(MutableSequence[T]):
     # The last method so it doesnt interfere with the generic type
     @property
     def T(self) -> "Tensor[T]":
+        """Returns the transpose of the tensor."""
         return self.apply_operation(func.Transpose(self), inplace=False)

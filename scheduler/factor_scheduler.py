@@ -7,12 +7,6 @@ from .scheduler import Scheduler
 class FactorScheduler(Scheduler):
     """
     Learning rate scheduler that reduces the learning rate by a factor.
-
-    Attributes:
-        learning_rate (float): Initial learning rate
-        factor_lr (float): Factor to multiply learning rate by each update
-        min_lr (float): Minimum learning rate
-        patience_update (int): Number of epochs to wait before updating.
     """
 
     learning_rate: float = 0.01
@@ -41,13 +35,6 @@ class FactorScheduler(Scheduler):
             )
 
     def update(self, epoch: int) -> None:
-        """
-        Updates the learning rate based on the current epoch.
-        Args:
-            epoch (int): The current epoch number. Must be a non-negative integer.
-        Raises:
-            ValueError: If the epoch is a negative integer.
-        """
         if epoch < 0:
             raise ValueError(f"The epoch must be a non-negative integer. Got {epoch}")
 

@@ -9,8 +9,6 @@ from core import Tensor
 class Initializator(ABC):
     """
     Initializator is an abstract base class for initializing neural network weights.
-    Attributes:
-        gain (float): A scaling factor for the weights.
     """
 
     gain: float

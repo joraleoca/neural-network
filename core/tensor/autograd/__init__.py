@@ -1,5 +1,5 @@
 """
-This module implements the basic operations that can be applied to functions.
+This module contains the autograd engine, which is responsible for computing gradients of differentiable functions.
 
 Classes:
     Function: A base class for all differentiable functions.

@@ -11,9 +11,6 @@ from core import Tensor, constants as c
 class ParameterLoader:
     """
     ParameterLoader is a class responsible for loading and validating neural network parameters from a file path.
-
-    Attributes:
-        path (Path): The path to the file containing the neural network parameters.
     """
 
     path: Path

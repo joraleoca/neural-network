@@ -13,6 +13,7 @@ class TrainingConfig:
         patience_stop (int): Patience for early stopping, 0 is no stop.
         min_delta (float): Minimum change in loss to be considered an improvement.
         debug (bool): Flag to enable debugging mode.
+        store (bool): Flag to store the model after training.
     """
 
     lr: Scheduler = field(default_factory=FactorScheduler)

@@ -7,6 +7,8 @@ from ... import tensor
 
 
 class Max(Function):
+    """Function that computes the maximum value of a tensor."""
+
     __slots__ = ["axis", "keepdims"]
 
     def __init__(

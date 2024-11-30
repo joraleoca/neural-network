@@ -7,6 +7,8 @@ from core import Tensor
 
 @dataclass(slots=True)
 class Dropout:
+    """Dropout regularization."""
+
     p: float = 0.1
 
     def __post_init__(self):

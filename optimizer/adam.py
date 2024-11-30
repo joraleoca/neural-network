@@ -5,6 +5,8 @@ from core import Tensor, op, constants as c
 
 
 class Adam(Optimizer):
+    """Adam optimizer."""
+
     __slots__ = [
         "b1",
         "b2",

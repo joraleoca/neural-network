@@ -9,13 +9,7 @@ from core import Tensor
 
 @dataclass(slots=True)
 class SGD(Optimizer):
-    """Stochastic Gradient Descent optimizer with momentum and Nesterov acceleration support.
-
-    Attributes:
-        momentum (float): Momentum factor between 0 and 1
-        weight_decay (float): Weight decay factor between 0 and 0.1
-        nesterov (bool): Whether to use Nesterov momentum
-    """
+    """Stochastic Gradient Descent optimizer with momentum and Nesterov acceleration support."""
 
     momentum: float = 0.0
     weight_decay: float = 0.0

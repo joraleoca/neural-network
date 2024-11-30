@@ -3,6 +3,8 @@ from ... import tensor
 
 
 class Transpose(Function):
+    """Function that computes the transpose of a tensor."""
+
     def __init__(self, a: "tensor.Tensor") -> None:
         self.args = (a,)
 

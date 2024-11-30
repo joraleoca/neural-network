@@ -5,6 +5,8 @@ from ... import tensor
 
 
 class Round(Function):
+    """Function that rounds the elements of a tensor to the nearest integer."""
+
     __slots__ = ["decimals"]
 
     def __init__(self, a: "tensor.Tensor", *, decimals: int = 0):

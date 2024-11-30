@@ -5,6 +5,8 @@ from ... import tensor
 
 
 class Log(Function):
+    """Function that computes the element-wise natural logarithm of a tensor."""
+
     def __init__(self, a: "tensor.Tensor"):
         self.args = (a,)
 

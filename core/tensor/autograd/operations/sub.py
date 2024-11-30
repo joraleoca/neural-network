@@ -5,6 +5,8 @@ from ... import tensor
 
 
 class Sub(Function):
+    """Function that computes the element-wise subtraction of two tensors."""
+
     def __init__(self, a: "tensor.Tensor", b: "tensor.Tensor") -> None:
         self.args = (a, b)
 

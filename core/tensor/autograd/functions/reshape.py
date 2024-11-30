@@ -5,6 +5,8 @@ from ... import tensor
 
 
 class Reshape(Function):
+    """Function that reshapes a tensor."""
+
     __slots__ = ["shape"]
 
     def __init__(self, a: "tensor.Tensor", *, shape: tuple[int, ...]):

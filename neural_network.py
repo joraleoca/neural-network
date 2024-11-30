@@ -59,6 +59,7 @@ class NeuralNetwork:
     def __init__(self, config: NeuralNetworkConfig) -> None:
         """
         Initializes the neural network with the given config.
+
         Args:
             config (NeuralNetworkConfig): Configuration for the neural network.
         """
@@ -111,8 +112,10 @@ class NeuralNetwork:
     def forward_pass(self, inputs: Tensor[np.floating]) -> Tensor[np.floating]:
         """
         Perform a forward pass through the neural network.
+
         Args:
             inputs (Tensor[np.floating]): The input data for the forward pass.
+
         Returns:
             Tensor[np.floating]: The output of the neural network after the forward pass.
         """
@@ -130,9 +133,11 @@ class NeuralNetwork:
     ) -> list[Tensor[np.floating]]:
         """
         Perform a forward pass through the neural network.
+
         Args:
             inputs (Tensor[np.floating]): The input data for the neural network.
             training (bool): Flag indicating if its training or not
+
         Returns:
             list[Tensor[np.floating]]: The output of each layer of the neural network.
         """
@@ -260,9 +265,11 @@ class NeuralNetwork:
     ) -> list[Tensor[np.floating]]:
         """
         Perform the backward pass of the neural network, updating weights and biases.
+
         Args:
             data (list[tuple[Tensor, str]]): A list of tuples where each tuple contains
                 an input array and the corresponding expected label.
+
         Returns:
             list[np.floating]: The losses of the training.
         """

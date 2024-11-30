@@ -3,6 +3,8 @@ from ... import tensor
 
 
 class Neg(Function):
+    """Function that computes the element-wise negation of a tensor."""
+
     def __init__(self, a: "tensor.Tensor") -> None:
         self.args = (a,)
 

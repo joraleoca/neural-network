@@ -10,12 +10,6 @@ class CosineScheduler(Scheduler):
     """
     CosineScheduler is a learning rate scheduler that adjusts the learning rate
     following a cosine schedule.
-
-    Attributes:
-        max_steps (int): The total number of steps (epochs) for the scheduler.
-        learning_rate (float): The initial learning rate. Default is 0.01.
-        min_lr (float): The minimum learning rate. Default is 1e-7.
-        cyclic (bool): Whether the scheduler should restart after reaching max_steps.
     """
 
     max_steps: int

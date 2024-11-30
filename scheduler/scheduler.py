@@ -4,8 +4,6 @@ from abc import ABC, abstractmethod
 class Scheduler(ABC):
     """
     Scheduler is an abstract base class for learning rate schedulers.
-    Attributes:
-        learning_rate (float): The current learning rate.
     """
 
     learning_rate: float

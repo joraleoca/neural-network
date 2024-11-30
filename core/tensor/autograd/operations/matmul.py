@@ -5,6 +5,8 @@ from ... import tensor
 
 
 class Matmul(Function):
+    """Function that computes the matrix multiplication of two tensors."""
+
     def __init__(self, a: "tensor.Tensor", b: "tensor.Tensor") -> None:
         self.args = (a, b)
 
