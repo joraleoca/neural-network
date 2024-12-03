@@ -5,6 +5,7 @@ import numpy as np
 
 from .optimizer import Optimizer
 from core import Tensor
+from structure import Layer
 
 
 @dataclass(slots=True)
@@ -34,6 +35,54 @@ class SGD(Optimizer):
             raise ValueError(
                 f"Weight decay must be between 0 and 0.1. Got {self.weight_decay}"
             )
+
+    def __call__(self, lr: float, *, layers: list[Layer]):
+        """Optimize the parameters of the given layers."""
+
+        weights = []
+        biases = []
+        weights_grad = []
+        biases_grad = []
+
+        for layer in layers:
+            weights.append(layer.weights)
+            biases.append(layer.biases)
+
+            weights_grad.append(layer.weights_grad)
+            biases_grad.append(layer.biases_grad)
+
+        self._optimize_weights(lr, weights_grad, weights=weights)
+        self._optimize_biases(lr, biases_grad, biases=biases)
+
+    def _optimize_weights(
+        self,
+        lr: float,
+        gradients: list[Tensor[np.floating]],
+        *,
+        weights: list[Tensor[np.floating]],
+    ) -> None:
+        if self.momentum != 0:
+            self._iteration_weights += 1
+
+        self._last_weights_gradient = self._apply_momentum(
+            gradients, self._last_weights_gradient, self._iteration_weights
+        )
+        self._apply_update(lr, weights, self._last_weights_gradient)
+
+    def _optimize_biases(
+        self,
+        lr: float,
+        gradients: list[Tensor[np.floating]],
+        *,
+        biases: list[Tensor[np.floating]],
+    ) -> None:
+        if self.momentum != 0:
+            self._iteration_biases += 1
+
+        self._last_biases_gradient = self._apply_momentum(
+            gradients, self._last_biases_gradient, self._iteration_biases
+        )
+        self._apply_update(lr, biases, self._last_biases_gradient)
 
     def _apply_momentum(
         self,
@@ -87,33 +136,3 @@ class SGD(Optimizer):
                 params[i] *= 1 - self.weight_decay
             params[i] -= lr * gradients[i]
             params[i].requires_grad = True
-
-    def optimize_weights(
-        self,
-        lr: float,
-        gradients: list[Tensor[np.floating]],
-        *,
-        weights: list[Tensor[np.floating]],
-    ) -> None:
-        if self.momentum != 0:
-            self._iteration_weights += 1
-
-        self._last_weights_gradient = self._apply_momentum(
-            gradients, self._last_weights_gradient, self._iteration_weights
-        )
-        self._apply_update(lr, weights, self._last_weights_gradient)
-
-    def optimize_biases(
-        self,
-        lr: float,
-        gradients: list[Tensor[np.floating]],
-        *,
-        biases: list[Tensor[np.floating]],
-    ) -> None:
-        if self.momentum != 0:
-            self._iteration_biases += 1
-
-        self._last_biases_gradient = self._apply_momentum(
-            gradients, self._last_biases_gradient, self._iteration_biases
-        )
-        self._apply_update(lr, biases, self._last_biases_gradient)

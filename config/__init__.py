@@ -2,11 +2,14 @@
 This module initializes the necessary configuration classes used in neural networks.
 
 Classes:
-    - NeuralNetworkConfig: Configuration for the neural network
+    - FeedForwardConfig: Configuration for a feed-forward neural network
     - TrainingConfig: Configuration for training parameters
 """
 
-from .nn_config import NeuralNetworkConfig
 from .training_config import TrainingConfig
+from .ff_network import FeedForwardConfig
 
-__all__ = ["NeuralNetworkConfig", "TrainingConfig"]
+__all__ = [
+    "FeedForwardConfig",
+    "TrainingConfig",
+]

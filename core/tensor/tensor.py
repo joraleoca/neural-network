@@ -381,7 +381,10 @@ class Tensor(MutableSequence[T]):
         """
         Clears the gradient stored in the tensor.
         """
-        self.grad = np.zeros_like(self.data, dtype=np.floating)
+        if self._requires_grad:
+            self.grad = np.zeros_like(self.data, dtype=np.floating)
+        else:
+            del self.grad
         self._grad_operation = None
 
     # The last method so it doesnt interfere with the generic type

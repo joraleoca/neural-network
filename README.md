@@ -66,8 +66,8 @@ nn = NeuralNetwork()
 # Train the model
 nn.train(list(train_data), list(test_data))
 
-# Make predictions
-predictions = nn.predict(X_test)
+# Make prediction for a single data point
+prediction = nn.forward_pass(X_test[0])
 ```
 
 ### Example with Pandas (Optional)
@@ -80,6 +80,12 @@ from neural_network import NeuralNetwork
 data = pd.read_csv('your_dataset.csv')
 X = data.drop('target', axis=1).to_numpy()  # Convert to numpy array
 y = data['target'].to_numpy()  # Convert to numpy array
+```
+
+See the usage example file for more details. You need to install the example dependencies to run the example:
+
+```bash
+pip install -r requirements.example.txt
 ```
 
 ## Contributing

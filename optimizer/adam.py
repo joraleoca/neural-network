@@ -1,49 +1,49 @@
+from dataclasses import dataclass, field
+
 import numpy as np
 
 from .optimizer import Optimizer
 from core import Tensor, op, constants as c
+from structure import Layer
 
 
+@dataclass(slots=True)
 class Adam(Optimizer):
     """Adam optimizer."""
 
-    __slots__ = [
-        "b1",
-        "b2",
-        "mw",
-        "vw",
-        "mb",
-        "vb",
-        "_tw",
-        "_tb",
-    ]
+    b1: float = field(default=0.9)
+    b2: float = field(default=0.999)
 
-    b1: float
-    b2: float
+    mw: list[Tensor[np.floating]] = field(init=False, default_factory=list)
+    vw: list[Tensor[np.floating]] = field(init=False, default_factory=list)
 
-    mw: list[Tensor[np.floating]]
-    vw: list[Tensor[np.floating]]
+    mb: list[Tensor[np.floating]] = field(init=False, default_factory=list)
+    vb: list[Tensor[np.floating]] = field(init=False, default_factory=list)
 
-    mb: list[Tensor[np.floating]]
-    vb: list[Tensor[np.floating]]
+    _tw: int = field(init=False, default=0)
+    _tb: int = field(init=False, default=0)
 
-    _tw: int
-    _tb: int
-
-    def __init__(self, b1: float = 0.9, b2: float = 0.999):
-        if not (0 <= b1 < 1) or not (0 <= b2 < 1):
+    def __post_init__(self):
+        if not (0 <= self.b1 < 1) or not (0 <= self.b2 < 1):
             raise ValueError(
                 "The betas must be between 0 (inclusive) and 1 (exclusive)"
             )
 
-        self.b1 = b1
-        self.b2 = b2
-        self.mw = []
-        self.vw = []
-        self.mb = []
-        self.vb = []
-        self._tw = 0
-        self._tb = 0
+    def __call__(self, lr: float, *, layers: list[Layer]) -> None:
+        weights = []
+        biases = []
+        weights_grad = []
+        biases_grad = []
+
+        for layer in layers:
+            weights.append(layer.weights)
+            biases.append(layer.biases)
+
+            weights_grad.append(layer.weights_grad)
+            biases_grad.append(layer.biases_grad)
+
+        self._optimize(lr, weights_grad, params=weights, weights=True)
+        self._optimize(lr, biases_grad, params=biases, weights=False)
 
     def _optimize(
         self,
@@ -54,13 +54,12 @@ class Adam(Optimizer):
     ) -> None:
         """
         Optimizes the parameters using the Adam optimization algorithm.
+
         Args:
             lr (float): Learning rate.
             gradients (list[Tensor[np.floating]]): List of gradients for each parameter.
             params (list[Tensor[np.floating]]): List of parameters to be optimized.
             weights (bool): Flag indicating whether to update weights or biases.
-        Returns:
-            None
         """
         if weights:
             self._tw += 1
@@ -90,21 +89,3 @@ class Adam(Optimizer):
             params[i].requires_grad = False
             params[i] -= upd
             params[i].requires_grad = True
-
-    def optimize_weights(
-        self,
-        lr: float,
-        gradients: list[Tensor[np.floating]],
-        *,
-        weights: list[Tensor[np.floating]],
-    ) -> None:
-        return self._optimize(lr, gradients, params=weights, weights=True)
-
-    def optimize_biases(
-        self,
-        lr: float,
-        gradients: list[Tensor[np.floating]],
-        *,
-        biases: list[Tensor[np.floating]],
-    ) -> None:
-        return self._optimize(lr, gradients, params=biases, weights=False)

@@ -1,0 +1,5 @@
+-r requirements.txt
+
+pandas>=2.2.3
+ipykernel>=6.29.5
+ucimlrepo>=0.0.7

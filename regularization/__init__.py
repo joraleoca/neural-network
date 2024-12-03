@@ -1,10 +1,10 @@
 """
 This module implements regularization techniques for neural networks.
 
-Classes:
-    Dropout: Applies dropout regularization to a neural network layer.
+Functions:
+    dropout: Applies dropout regularization to a neural network layer.
 """
 
-from .dropout import Dropout
+from .dropout import dropout
 
-__all__ = ["Dropout"]
+__all__ = ["dropout"]

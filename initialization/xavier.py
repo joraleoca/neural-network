@@ -11,13 +11,14 @@ class XavierUniform(Uniform):
     """
 
     def initialize(
-        self, network_structure: list[int], *, rng: Generator | None = None
+        self, shape: tuple[int, ...], *, rng: Generator | None = None
     ) -> list[Tensor]:
-        bound = self.gain * (
-            np.sqrt(6 / (network_structure[0] + network_structure[-1]))
-        )
+        in_features = np.prod(shape[1:])
+        out_features = shape[0]
 
-        return self._initialize(network_structure, bound, rng=rng)
+        bound = self.gain * (np.sqrt(6 / (in_features + out_features)))
+
+        return self._initialize(shape, bound, rng=rng)
 
 
 class XavierNormal(Normal):
@@ -26,8 +27,11 @@ class XavierNormal(Normal):
     """
 
     def initialize(
-        self, network_structure: list[int], *, rng: Generator | None = None
+        self, shape: tuple[int, ...], *, rng: Generator | None = None
     ) -> list[Tensor]:
-        std = self.gain * (np.sqrt(2 / (network_structure[0] + network_structure[-1])))
+        in_features = np.prod(shape[1:])
+        out_features = shape[0]
 
-        return self._initialize(network_structure, std, rng=rng)
+        std = self.gain * (np.sqrt(2 / (in_features + out_features)))
+
+        return self._initialize(shape, std, rng=rng)
