@@ -50,6 +50,8 @@ Here's a basic example of how to use the neural network:
 ```python
 import numpy as np
 from neural_network import NeuralNetwork
+from config import FeedForwardConfig, TrainingConfig
+from loss import CategoricalCrossEntropy
 
 # Prepare your data as numpy arrays
 X_train = np.array(...)  # Your training data
@@ -60,11 +62,25 @@ X_test = np.array(...)  # Your testing data
 y_test = np.array(...)  # Your testing labels
 test_data = np.array([(d, label[0]) for d, label in zip(X_test, y_test)], dtype=object)
 
+
+config = FeedForwardConfig(
+    network_structure=[X_train.shape[1], 64, 32, 16],
+    classes=["class1", "class2", "class3"],
+    hidden_activation=LeakyRelu(),
+    output_activation=Softmax(),
+)
+
 # Initialize the neural network
-nn = NeuralNetwork()
+nn = NeuralNetwork(config)
 
 # Train the model
-nn.train(list(train_data), list(test_data))
+nn.train(
+    list(train_data),
+    list(test_data),
+    config=TrainingConfig(
+        loss=CategoricalCrossEntropy()
+    ),
+)
 
 # Make prediction for a single data point
 prediction = nn.forward_pass(X_test[0])
