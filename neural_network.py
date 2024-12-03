@@ -8,8 +8,6 @@ import matplotlib.pyplot as plt
 
 from config import FeedForwardConfig, TrainingConfig
 from core import (
-    ParameterLoader,
-    ParameterLoadError,
     Tensor,
     op,
     constants as c,
@@ -28,15 +26,12 @@ class NeuralNetwork:
         "layers",
         "encoder",
         "classes",
-        "params_file",
     )
 
     layers: list[Layer]
 
     classes: tuple[str, ...]
     encoder: Encoder
-
-    params_file: str | Path
 
     MAX_DELTA_NORM: Final[float] = 5.0
 
@@ -49,40 +44,9 @@ class NeuralNetwork:
         """
         self.layers = config.network_structure
         self.classes = config.classes
-        self.params_file = c.FILE_NAME
 
         if config.encoder:
             self.encoder = config.encoder(self.classes)
-
-        # Parameters initialization
-        if isinstance(config.initializer, ParameterLoader):
-            loader = config.initializer
-            self.params_file = loader.path
-            try:
-                weights, biases, expected_hidden_layers = loader.load()
-
-                if not self.layers:
-                    for i, w in enumerate(weights):
-                        self.layers.append(
-                            Layer(
-                                features=(w.shape[0], w.shape[1]),
-                                activation_function=config.hidden_activation,
-                                weights_initializer=None,
-                            )
-                        )
-
-                for i, layer in enumerate(self.layers):
-                    layer.weights = weights[i]
-                    layer.biases = biases[i]
-
-                if expected_hidden_layers != self.num_hidden_layers:
-                    raise ParameterLoadError(
-                        f"Expected {expected_hidden_layers} hidden layers, but got {self.num_hidden_layers}"
-                    )
-
-            except ParameterLoadError as e:
-                print(f"Error loading parameters: {e}")
-                return
 
     @property
     def num_hidden_layers(self) -> int:
@@ -238,12 +202,7 @@ class NeuralNetwork:
         self.layers = best_layers
 
         if config.store:
-            kwds = {}
-            for i, layer in enumerate(self.layers):
-                kwds[f"{c.WEIGHT_PREFIX}{i}"] = layer.weights
-                kwds[f"{c.BIAS_PREFIX}{i}"] = layer.biases
-
-            np.savez(self.params_file, **kwds)
+            self.store_params()
 
         if config.debug:
             self._plot_metrics_train(**metrics)
@@ -315,6 +274,20 @@ class NeuralNetwork:
             for input, label in data
         )
         return correct / len(data)
+
+    def store_params(self, file: str | Path = c.FILE_NAME) -> None:
+        """
+        Store the weights and biases of the neural network to a file.
+
+        Args:
+            file (str | Path): The file path to store the weights and biases.
+        """
+        kwds = {}
+        for i, layer in enumerate(self.layers):
+            kwds[f"{c.WEIGHT_PREFIX}{i}"] = layer.weights
+            kwds[f"{c.BIAS_PREFIX}{i}"] = layer.biases
+
+        np.savez(file, **kwds)
 
     @staticmethod
     def _plot_metrics_train(

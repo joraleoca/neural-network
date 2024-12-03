@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 
+import numpy as np
+
 from structure import Layer
 from activation import ActivationFunction
 from initialization import Initializator, HeUniform
 from encode import Encoder
-from core.loader import ParameterLoader
+from core import ParameterLoader, ParameterLoadError
 
 
 @dataclass(slots=True)
@@ -23,7 +25,8 @@ class FeedForwardConfig:
         random_seed (int | None): The random seed for reproducibility.
     """
 
-    network_structure: list[Layer] | list[int]
+    network_structure: list[Layer] | list[int] | None
+
     classes: tuple[str, ...]
 
     initializer: Initializator | ParameterLoader = HeUniform()
@@ -38,6 +41,14 @@ class FeedForwardConfig:
     def __post_init__(self):
         """Validate initialization parameters and set layers parameters."""
 
+        if self.network_structure:
+            self._prepare_network_structure()
+
+        if isinstance(self.initializer, ParameterLoader):
+            self.load_parameters()
+
+    def _prepare_network_structure(self):
+        """Prepare the network structure by setting the activation functions and initializers."""
         if not isinstance(self.network_structure, list):
             raise TypeError("network_structure must be a list.")
 
@@ -59,3 +70,49 @@ class FeedForwardConfig:
 
             if layer.rng is None:
                 layer.rng = self.random_seed
+
+    def load_parameters(self):
+        """
+        Load parameters from a file using the initializer.
+
+        Raises:
+            ParameterLoadError: If any error occurs while loading the parameters.
+        """
+        weights, biases, expected_hidden_layers = self.initializer.load()
+
+        if not self.network_structure:
+            self.network_structure = []
+
+        for i, w in enumerate(weights):
+            if i < len(self.network_structure):
+                layer = self.network_structure[i]
+
+                if hasattr(layer, "in_features") and layer.in_features != w.shape[1]:
+                    raise ParameterLoadError(
+                        f"Expected {layer.in_features} input features, but got {w.shape[1]}"
+                    )
+
+                if layer.out_features != w.shape[0]:
+                    raise ParameterLoadError(
+                        f"Expected {layer.out_features} output features, but got {w.shape[0]}"
+                    )
+
+                layer.in_features = np.prod(w.shape[1:])
+                layer.out_features = w.shape[0]
+            else:
+                layer = Layer(
+                    w.shape[::-1], self.hidden_activation, rng=self.random_seed
+                )
+
+                if i == len(weights) - 1:
+                    layer.activation_function = self.output_activation
+
+                self.network_structure.append(layer)
+
+            layer.weights = w
+            layer.biases = biases[i]
+
+        if expected_hidden_layers != len(self.network_structure) - 2:
+            raise ParameterLoadError(
+                f"Expected {expected_hidden_layers} hidden layers, but got {len(self.network_structure) - 2}"
+            )

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from scheduler import Scheduler, FactorScheduler
 from optimizer import Optimizer, SGD
@@ -19,7 +20,7 @@ class TrainingConfig:
         batch_size (int): Batch size for training.
         dropout (float): Dropout rate
         debug (bool): Flag to enable debugging mode.
-        store (bool): Flag to store the model after training.
+        store (str | Path | None): Path to store the training results or None if not store.
     """
 
     loss: Loss
@@ -35,7 +36,7 @@ class TrainingConfig:
     dropout: float = 0.0
 
     debug: bool = False
-    store: bool = False
+    store: str | Path | None = None
 
     def __post_init__(self):
         """Validate initialization parameters."""
