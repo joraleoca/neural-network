@@ -107,7 +107,7 @@ class ParameterLoader:
                 "Invalid parameter file: Expected even number of parameters (weights/biases pairs)"
             )
 
-        return num_layers_params - 1
+        return num_layers_params - 2
 
     def _create_weights_biases(
         self, params: dict[str, NDArray]
