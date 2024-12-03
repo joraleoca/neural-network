@@ -52,6 +52,7 @@ import numpy as np
 from neural_network import NeuralNetwork
 from config import FeedForwardConfig, TrainingConfig
 from loss import CategoricalCrossEntropy
+from activation import LeakyRelu, Softmax
 
 # Prepare your data as numpy arrays
 X_train = np.array(...)  # Your training data
