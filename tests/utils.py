@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from core import Tensor
+from src.core import Tensor
 
 
 def assert_grad(arr: Tensor, grad: NDArray) -> None:

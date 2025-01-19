@@ -38,9 +38,9 @@ pip install -r requirements.txt
 ### Core Requirements
 - Python 3.x
 - NumPy - for numerical computations
-- Matplotlib - for data visualization
 
 ### Optional Dependencies
+- Matplotlib - for data visualization (only used for training debug)
 - Pandas - if you want to work with DataFrame inputs
 
 ## Usage
@@ -48,25 +48,24 @@ pip install -r requirements.txt
 Here's a basic example of how to use the neural network:
 
 ```python
-import numpy as np
-from neural_network import NeuralNetwork
-from config import FeedForwardConfig, TrainingConfig
-from loss import CategoricalCrossEntropy
-from activation import LeakyRelu, Softmax
+from src import NeuralNetwork
+from src.core import Tensor
+from src.config import FeedForwardConfig, TrainingConfig
+from src.loss import CategoricalCrossentropy
+from src.activation import LeakyRelu, Softmax
 
 # Prepare your data as numpy arrays
-X_train = np.array(...)  # Your training data
-y_train = np.array(...)  # Your training labels
-train_data = np.array([(d, label[0]) for d, label in zip(X_train, y_train)], dtype=object)
+X_train = Tensor(...)  # Your training data
+y_train = Tensor(...)  # Your training labels
+train_data = Tensor([(d, label[0]) for d, label in zip(X_train, y_train)], dtype=object)
 
-X_test = np.array(...)  # Your testing data
-y_test = np.array(...)  # Your testing labels
-test_data = np.array([(d, label[0]) for d, label in zip(X_test, y_test)], dtype=object)
-
+X_test = Tensor(...)  # Your testing data
+y_test = Tensor(...)  # Your testing labels
+test_data = Tensor([(d, label[0]) for d, label in zip(X_test, y_test)], dtype=object)
 
 config = FeedForwardConfig(
     network_structure=[X_train.shape[1], 64, 32, 16],
-    classes=["class1", "class2", "class3"],
+    classes=("class1", "class2", "class3"),
     hidden_activation=LeakyRelu(),
     output_activation=Softmax(),
 )
@@ -79,7 +78,7 @@ nn.train(
     list(train_data),
     list(test_data),
     config=TrainingConfig(
-        loss=CategoricalCrossEntropy()
+        loss=CategoricalCrossentropy()
     ),
 )
 
@@ -91,7 +90,7 @@ prediction = nn.forward_pass(X_test[0])
 ```python
 import pandas as pd
 import numpy as np
-from neural_network import NeuralNetwork
+from src import NeuralNetwork
 
 # If using pandas
 data = pd.read_csv('your_dataset.csv')
@@ -99,7 +98,7 @@ X = data.drop('target', axis=1).to_numpy()  # Convert to numpy array
 y = data['target'].to_numpy()  # Convert to numpy array
 ```
 
-See the usage example file for more details. You need to install the example dependencies to run the example:
+**See the usage example file for more details. You need to install the example dependencies to run the example:**
 
 ```bash
 pip install -r requirements.example.txt

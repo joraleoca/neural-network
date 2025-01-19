@@ -1,10 +1,11 @@
 import pytest
 import numpy as np
 
-from core import Tensor, constants as c
+from src.core import Tensor
+import src.constants as c
 
 from utils import assert_grad, assert_data
-import loss
+from src import loss
 
 
 @pytest.fixture()

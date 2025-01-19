@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
 
-from core import Tensor, op
+from src.core import Tensor
+from src.core.tensor import op
 from utils import assert_data, assert_grad
 
 
@@ -24,7 +25,7 @@ class TestTensorCreation:
         data = [1, 2, 3]
         tensor = Tensor(data, dtype=np.float32, requires_grad=True)
         assert_data(tensor, np.array(data, dtype=np.float32))
-        assert_grad(tensor, np.zeros_like(tensor.data))
+        assert tensor.grad is None
         assert tensor.requires_grad
 
 
@@ -177,6 +178,14 @@ class TestTensorShapeOperations:
         vector_result = tensor1 @ vector
         assert_data(vector_result, np.array([17, 39], dtype=np.float32))
 
+    def test_tensor_flatten(self):
+        """Test tensor flattening."""
+        tensor = Tensor([[1, 2], [3, 4]], dtype=np.float32)
+
+        t1 = tensor.flatten()
+
+        assert_data(t1, tensor.data.flatten())
+
 
 class TestTensorProperties:
     def test_tensor_properties(self, sample_2d_tensor):
@@ -188,6 +197,10 @@ class TestTensorProperties:
     def test_tensor_grad_management(self):
         """Test gradient management for tensors."""
         tensor = Tensor([1, 2, 3], dtype=np.float32, requires_grad=True)
+        tensor.clear_grad()
+        assert tensor.grad is None
+
+        tensor.grad = np.zeros_like(tensor.data)
         tensor.clear_grad()
         assert_grad(tensor, np.zeros_like(tensor.data))
 

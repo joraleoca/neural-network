@@ -1,6 +1,8 @@
 import numpy as np
 
-from core import Tensor, op
+from src.core import Tensor
+from src.core.tensor import op
+from src.constants import EPSILON
 
 from utils import assert_grad
 
@@ -53,7 +55,7 @@ class TestBinaryOperations:
         c.backward()
 
         assert_grad(a, np.ones_like(a))
-        assert_grad(b, np.ones_like(a))
+        assert_grad(b, np.sum(np.ones_like(a)))
 
         a.clear_grad()
         b.clear_grad()
@@ -64,7 +66,7 @@ class TestBinaryOperations:
         c.backward()
 
         assert_grad(a, np.ones_like(a))
-        assert_grad(b, np.ones_like(a))
+        assert_grad(b, np.sum(np.ones_like(a)))
 
     def test_mul_backward(self):
         """Test the backward computation for the multiplication operation."""
@@ -88,7 +90,7 @@ class TestBinaryOperations:
         c.backward()
 
         assert_grad(a, b.data)
-        assert_grad(b, a.data)
+        assert_grad(b, np.sum(a.data))
 
         a.clear_grad()
         b.clear_grad()
@@ -99,7 +101,7 @@ class TestBinaryOperations:
         c.backward()
 
         assert_grad(a, b.data)
-        assert_grad(b, a.data)
+        assert_grad(b, np.sum(a.data))
 
     def test_sub_backward(self):
         """Test the backward computation for the subtract operation."""
@@ -123,7 +125,7 @@ class TestBinaryOperations:
         c.backward()
 
         assert_grad(a, np.ones_like(a))
-        assert_grad(b, -1 * np.ones_like(a))
+        assert_grad(b, -np.sum(np.ones_like(a)))
 
         a.clear_grad()
         b.clear_grad()
@@ -134,7 +136,7 @@ class TestBinaryOperations:
         c.backward()
 
         assert_grad(a, np.full_like(a, -1))
-        assert_grad(b, np.ones_like(a))
+        assert_grad(b, np.sum(np.ones_like(a)))
 
     def test_div_backward(self):
         """Test the backward computation for the division operation."""
@@ -158,7 +160,7 @@ class TestBinaryOperations:
         c.backward()
 
         assert_grad(a, 1 / b.data)
-        assert_grad(b, -a.data / (b.data**2))
+        assert_grad(b, np.sum(-a.data / (b.data**2)))
 
         a.clear_grad()
         b.clear_grad()
@@ -169,7 +171,7 @@ class TestBinaryOperations:
         c.backward()
 
         assert_grad(a, -b.data / (a.data**2))
-        assert_grad(b, 1 / a.data)
+        assert_grad(b, np.sum(1 / a.data))
 
     def test_matmul_backward(self):
         """Test the backward computation for the matrix multiplication operation."""
@@ -211,7 +213,7 @@ class TestBinaryOperations:
         c.backward()
 
         expected_grad_a = b.data * (a.data ** (b.data - 1))
-        expected_grad_b = (a.data**b.data) * np.log(a.data)
+        expected_grad_b = np.sum((a.data**b.data) * np.log(a.data))
 
         assert_grad(a, expected_grad_a)
         assert_grad(b, expected_grad_b)
@@ -225,7 +227,7 @@ class TestBinaryOperations:
         c.backward()
 
         expected_grad_a = (b.data**a.data) * np.log(b.data)
-        expected_grad_b = a.data * (b.data ** (a.data - 1))
+        expected_grad_b = np.sum(a.data * (b.data ** (a.data - 1)))
 
         assert_grad(a, expected_grad_a)
         assert_grad(b, expected_grad_b)
@@ -406,6 +408,42 @@ class TestFunctionalOperations:
 
         assert_grad(a, expected_grad_a)
 
+    def test_mean_backwards(self):
+        """Test the backward computation for the mean operation."""
+        a = Tensor([1, 3, 2], dtype=np.float32, requires_grad=True)
+        b = a.mean()
+
+        b.backward()
+
+        # For mean, backward distributes gradient evenly (1/3 for each element)
+        expected_grad_a = np.ones_like(a.data) / len(a.data)
+
+        assert_grad(a, expected_grad_a)
+
+    def test_mean_backward_axis_0(self):
+        """Test the backward computation for the mean operation along axis 0."""
+        a = Tensor([[1, 4, 3], [2, 3, 5]], dtype=np.float32, requires_grad=True)
+        b = a.mean(axis=0)
+
+        b.backward()
+
+        expected_grad_a = 1 / a.data.shape[0]
+
+        assert_grad(a, expected_grad_a)
+
+    def test_mean_backward_axis_0_1(self):
+        """Test the backward computation for the mean operation along axis 1.2."""
+        a = Tensor(
+            [[1, 4, 3], [2, 3, 5], [6, 7, 8]], dtype=np.float32, requires_grad=True
+        )
+        b = a.mean(axis=(0, 1))
+
+        b.backward()
+
+        expected_grad_a = np.ones_like(a.data) / (a.data.shape[0] * a.data.shape[1])
+
+        assert_grad(a, expected_grad_a)
+
     def test_tanh_backward(self):
         """Test the backward computation for the tanh operation."""
 
@@ -443,6 +481,24 @@ class TestFunctionalOperations:
         # For reshape, backward is the same as the original tensor
         assert_grad(a, np.ones_like(a))
 
+    def test_flatten_backward(self):
+        """Test the backward computation for the flatten operation."""
+        a = Tensor([[1, 2, 3], [4, 5, 6]], dtype=np.float32, requires_grad=True)
+        b = a.flatten()
+
+        b.backward()
+
+        assert_grad(a, np.ones_like(a))
+
+    def test_expand_dims_backward(self):
+        """Test the backward computation for the expand dimensions operation."""
+        a = Tensor([[1, 2, 3], [4, 5, 6]], dtype=np.float32, requires_grad=True)
+        b = op.expand_dims(a, 0)
+
+        b.backward()
+
+        assert_grad(a, np.ones_like(a))
+
     def test_round_backward(self):
         """Test the backward computation for the round operation."""
 
@@ -465,7 +521,7 @@ class TestFunctionalOperations:
         d.backward()
 
         grad_c = d.data
-        grad_b = grad_c * (a.data**b.data) * np.log(a.data)
+        grad_b = grad_c * (a.data**b.data) * np.log(a.data + EPSILON)
         grad_a = grad_c * b.data * (a.data ** (b.data - 1))
 
         assert_grad(c, grad_c)

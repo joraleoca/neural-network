@@ -1,6 +1,8 @@
 .vscode/
+.idea/
 .venv/
 __pycache__/
 .pytest_cache/
 
 *.npz
+.ipynb_checkpoints/
