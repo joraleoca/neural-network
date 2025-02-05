@@ -1,10 +1,11 @@
-from typing import Iterable, Sequence, SupportsIndex
+from typing import Sequence, SupportsIndex
 
 import numpy as np
-from numpy.typing import DTypeLike
+from numpy.typing import DTypeLike, ArrayLike
 
 from .tensor import Tensor, T
 from .autograd import functions as func
+from .utils import ensure_input_tensor
 
 
 def empty(
@@ -35,8 +36,8 @@ def zeros_like(
         Tensor: A tensor filled with zeros with the same shape and dtype as the input tensor.
     """
     return Tensor(
-        np.zeros_like(arr.data, dtype=dtype),
-        dtype=dtype,
+        np.zeros_like(arr.data, dtype=dtype or arr.dtype),
+        dtype=dtype or arr.dtype,
         requires_grad=requires_grad,
     )
 
@@ -63,11 +64,12 @@ def zeros(
     )
 
 
-def exp(input: Tensor[T], *, inplace: bool = False) -> Tensor[T]:
+@ensure_input_tensor
+def exp(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]:
     """
-    Compute the exponential of all elements in the input tensor.
+    Compute the exponential of all elements in the input.
     Args:
-        input (Tensor): The input tensor.
+        input (Tensor): The input data.
         inplace (bool): Flag to modify the input tensor.
     Returns:
         Tensor: The exponential of all elements in the input tensor.
@@ -78,87 +80,90 @@ def exp(input: Tensor[T], *, inplace: bool = False) -> Tensor[T]:
 
     return np.e**input
 
-
+@ensure_input_tensor
 def sum(
-    input: Tensor[T],
+    input: Tensor[T] | ArrayLike | T,
     axis: int | tuple[int, ...] | None = None,
     keepdims: bool = False,
-) -> Tensor[T] | T:
+) -> Tensor[T]:
     """
-    Compute the sum of all elements in the input tensor.
+    Compute the sum of all elements in the input.
     Args:
-        input (Tensor): The input tensor.
+        input (Tensor | ArrayLike | T): The input data.
         axis (int | tuple[int, ...] | None): The axis along which the sum is computed.
         keepdims (bool): Flag to keep the dimensions of the input tensor.
     Returns:
-        Tensor | T: The sum of all elements in the input tensor.
+        Tensor: The sum of all elements in the input.
     """
     return input.apply_operation(func.Sum(input, axis=axis, keepdims=keepdims))
 
-
+@ensure_input_tensor
 def max(
-    input: Tensor[T],
+    input: Tensor[T] | ArrayLike | T,
     axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
     keepdims: bool = False,
-) -> Tensor[T] | T:
+) -> Tensor[T]:
     """
-    Compute the maximum of all elements in the input tensor.
+    Compute the maximum of all elements in the input.
     Args:
-        input (Tensor): The input tensor.
+        input (Tensor | ArrayLike | T): The input data.
         axis (SupportsIndex | Sequence[SupportsIndex] | None): The axis along which the maximum is computed.
-        keepdims (bool): Flag to keep the dimensions of the input tensor.
+        keepdims (bool): Flag to keep the dimensions of the input.
     Returns:
-        Tensor | T: The maximum of all elements in the input tensor.
+        Tensor: The maximum of all elements in the input.
     """
     return input.apply_operation(func.Max(input, axis=axis, keepdims=keepdims))
 
+@ensure_input_tensor
 def min(
-    input: Tensor[T],
+    input: Tensor[T] | ArrayLike | T,
     axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
     keepdims: bool = False,
-) -> Tensor[T] | T:
+) -> Tensor[T]:
     """
-    Compute the minimum of all elements in the input tensor.
+    Compute the minimum of all elements in the input.
     Args:
-        input (Tensor): The input tensor.
+        input (Tensor | ArrayLike | T): The input data.
         axis (SupportsIndex | Sequence[SupportsIndex] | None): The axis along which the minimum is computed.
         keepdims (bool): Flag to keep the dimensions of the input tensor.
     Returns:
-        Tensor | T: The minimum of all elements in the input tensor.
+        Tensor: The minimum of all elements in the input tensor.
     """
     return input.apply_operation(func.Min(input, axis=axis, keepdims=keepdims))
 
-def mean(input: Tensor[T], *, axis: int | tuple[int, ...] | None = None) -> Tensor[T] | T:
+@ensure_input_tensor
+def mean(input: Tensor[T] | ArrayLike | T, *, axis: int | tuple[int, ...] | None = None) -> Tensor[T]:
     """
-    Compute the mean of all elements in the input tensor.
+    Compute the mean of all elements in the input.
     Args:
-        input: The input tensor.
-        axis: The axis along which the mean is computed.
+        input (Tensor | ArrayLike | T): The input data.
+        axis (int | tuple[int, ...]): The axis along which the mean is computed.
     Returns:
-        Tensor | T: The mean of all elements in the input tensor.
+        Tensor: The mean of all elements in the input.
     """
     return input.apply_operation(func.Mean(input, axis=axis))
 
-def tanh(input: Tensor[T], *, inplace: bool = False) -> Tensor[T]:
+@ensure_input_tensor
+def tanh(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]:
     """
-    Compute the tangent of all elements in the input tensor.
+    Compute the tangent of all elements in the input.
     Args:
-        input (Tensor): The input tensor.
-        inplace (bool): Flag to modify the input tensor.
+        input (Tensor | ArrayLike | T): The input data.
+        inplace (bool): Flag to modify the input.
     Returns:
-        Tensor: The hyperbolic tangent of all elements in the input tensor.
+        Tensor: The hyperbolic tangent of all elements in the input.
     """
     return input.apply_operation(func.Tanh(input), inplace=inplace)
 
-
-def log(input: Tensor[T], *, inplace: bool = False) -> Tensor[T]:
+@ensure_input_tensor
+def log(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]:
     """
-    Compute the natural logarithm of all elements in the input tensor.
+    Compute the natural logarithm of all elements in the input.
     Args:
-        input (Tensor): The input tensor.
-        inplace (bool): Flag to modify the input tensor.
+        input (Tensor): The input data.
+        inplace (bool): Flag to modify the input.
     Returns:
-        Tensor: The natural logarithm of all elements in the input tensor.
+        Tensor: The natural logarithm of all elements in the input.
     """
     return input.apply_operation(func.Log(input), inplace=inplace)
 
@@ -207,20 +212,22 @@ def expand_dims(input: Tensor[T], axis: int | list[int] | tuple[int, ...]) -> Te
     """
     return input.apply_operation(operation=func.ExpandDims(input, axis))
 
-def round(input: Tensor[T], decimals: int = 0, *, inplace: bool = False) -> Tensor[T]:
+@ensure_input_tensor
+def round(input: Tensor[T] | ArrayLike | T, decimals: int = 0, *, inplace: bool = False) -> Tensor[T]:
     """
-    Round the input tensor to the specified number of decimals.
+    Round the input to the specified number of decimals.
     Args:
-        input (Tensor): The input tensor.
+        input (Tensor | ArrayLike | T): The input data.
         decimals (int): The number of decimals to round to.
-        inplace (bool): Flag to modify the input tensor.
+        inplace (bool): Flag to modify the input.
     Returns:
         Tensor: The rounded tensor.
     """
     return input.apply_operation(func.Round(input, decimals=decimals), inplace=inplace)
 
+@ensure_input_tensor
 def pad(
-        input: Tensor[T],
+        input: Tensor[T] | ArrayLike,
         pad_width: int | tuple,
         *,
         value: T = 0
@@ -246,7 +253,7 @@ def compose(tensors: list[Tensor[T]] | tuple[Tensor[T], ...]) -> Tensor[T]:
     Returns:
         New tensor composed of the tensors.
     """
-    # The tensor used to apply operation doesn't care
+    # The tensor used to apply operation doesn't matter
     return tensors[0].apply_operation(func.Compose(tensors))
 
 def cce(predicted: Tensor[T], expected: Tensor[T]) -> Tensor[T]:

@@ -11,7 +11,7 @@ from .core import (
     Tensor,
     op,
 )
-from .structure import Layer, Trainable
+from .structure import Layer, Trainable, Convolution
 from .loss import CategoricalCrossentropy
 from .encode import Encoder
 
@@ -68,19 +68,18 @@ class NeuralNetwork:
         """
         return [(layer.weights, layer.biases) for layer in self._trainable_layers]
 
-    def forward_pass(self, inputs: Tensor[np.floating]) -> Tensor[np.floating]:
+    def forward_pass(self, input: Tensor[np.floating] | ArrayLike) -> Tensor[np.floating]:
         """
         Perform a forward pass through the neural network.
 
         Args:
-            inputs (Tensor[np.floating]): The input data for the forward pass.
+            input (Tensor[np.floating]): The input data for the forward pass.
         Returns:
             Tensor[np.floating]: The output of the neural network after the forward pass.
         """
-        if not isinstance(inputs, Tensor):
-            inputs = Tensor(inputs)
-
-        return self._forward_pass(inputs)
+        if not isinstance(input, Tensor):
+            input = Tensor(input)
+        return self._forward_pass(input)
 
     def _forward_pass(
         self,
@@ -101,21 +100,20 @@ class NeuralNetwork:
 
         return last_output
 
-    @staticmethod
-    def _set_data_requires_grad(data: list[tuple[Tensor[float] | ArrayLike, str]]) -> None:
+    def _prepare_data_for_train(
+            self, data: list[tuple[Tensor[float] | ArrayLike, str]]
+    ) -> list[tuple[Tensor[float], Tensor]]:
         """
         Set the requires_grad attribute to True for the input data,
-        also convert all data to Tensor if it is not already.\n
-        This operation is done in-place.
+        Convert all data to Tensor if it is not already.\n
+        Encodes labels.\n
 
         Args:
             data (list[tuple[Tensor[float] | ArrayLike[float], str]]): The input data to be set.
+        Returns:
+            list[tuple[Tensor[float] | ArrayLike[float], str]]: The data and encoded labels.
         """
-        for i, item in enumerate(data):
-            if isinstance(item[0], Tensor):
-                item[0].requires_grad = True
-            else:
-                data[i] = (Tensor(item[0], requires_grad=True), item[1])
+        return [(Tensor(item[0], requires_grad=True), self.encoder(item[1])) for item in data]
 
     def train(
         self,
@@ -145,8 +143,7 @@ class NeuralNetwork:
             self.encoder = encoder_class(self.classes)
 
         # Set requires_grad to True for all input data
-        self._set_data_requires_grad(data_train)
-        self._set_data_requires_grad(data_evaluate)
+        data_train_encoded = self._prepare_data_for_train(data_train)
 
         for layer in self._trainable_layers:
             layer.requires_grad = True
@@ -157,10 +154,25 @@ class NeuralNetwork:
         metrics = {"losses": [], "train_acc": [], "test_acc": []}
 
         best_layers = []
+        best_trainable_layers = []
         best_accuracy = 0.0
 
+        n_batches = (len(data_train_encoded) + config.batch_size - 1) // config.batch_size
+        batches_np = np.array_split(np.array(data_train_encoded, dtype=object), n_batches)
+        batches = []
+
+        for data_batch in batches_np:
+            data = []
+            expected = []
+            for inputs, expect in data_batch:
+                if isinstance(self.layers[0], Convolution) and inputs.ndim == 2:
+                    inputs = op.expand_dims(inputs, axis=0)
+                data.append(inputs)
+                expected.append(expect)
+            batches.append((op.compose(data), Tensor(expected)))
+
         for epoch in range(config.epochs + 1):
-            losses = self._backward(data_train, config)
+            losses = self._backward(batches, config)
             current_epoch_loss = np.mean(losses)
 
             val_accuracy = self.evaluate(data_evaluate)
@@ -168,6 +180,7 @@ class NeuralNetwork:
             if val_accuracy >= best_accuracy:
                 best_accuracy = val_accuracy
                 best_layers = deepcopy(self.layers)
+                best_trainable_layers = deepcopy(self._trainable_layers)
 
             if current_epoch_loss < last_epoch_loss - config.min_delta:
                 patience_counter = 0
@@ -195,6 +208,7 @@ class NeuralNetwork:
                 )
 
         self.layers = best_layers
+        self._trainable_layers = best_trainable_layers
 
         for layer in self._trainable_layers:
             layer.requires_grad = False
@@ -206,44 +220,36 @@ class NeuralNetwork:
             self._plot_metrics_train(**metrics)
 
     def _backward(
-        self, data: list[tuple[Tensor, str]], config: TrainingConfig
+        self, batches: list[tuple[Tensor, Tensor]], config: TrainingConfig
     ) -> list[float]:
         """
-        Perform the backward pass of the neural network, updating weights and biases.
+        Perform the backward pass of the neural network to update weights and biases.
 
         Args:
-            data (list[tuple[Tensor, str]]): A list of tuples where each tuple contains
-                an input array and the corresponding expected label.
-            config (TrainingConfig): Configuration for training.
+            batches (list[tuple[Tensor, Tensor]]): A list of tuples, where each tuple contains:
+                - A Tensor representing the input data for a batch.
+                - A Tensor representing the corresponding labels for the batch.
+            config (TrainingConfig): Configuration parameters for training.
         Returns:
-            list[float]: The losses of the training.
+            list[float]: A list of loss values for each batch, representing the error computed
+                during the backward pass.
         """
-        data_array = np.array(data, dtype=object)
-        n_batches = (len(data_array) + config.batch_size - 1) // config.batch_size
-        batches = np.array_split(data_array, n_batches)
-
         losses: list[float] = []
 
-        for data_batch in batches:
-            for inputs, expected_label in data_batch:
-                expected = self.encoder(expected_label)
-                predicted = self._forward_pass(inputs)
+        for data, expected in batches:
+            predicted = self._forward_pass(data)
 
-                if isinstance(config.loss, CategoricalCrossentropy):
-                    # This approach is used because the current autograd implementation does not support
-                    # the computation of the Jacobian matrix, which is necessary for calculating the gradient.
-                    # TODO: Implement the Jacobian matrix in the autograd system and remove this workaround.
-                    # This approach is functional until the Jacobian matrix support is added.
-                    loss = op.cce(predicted, expected)
-                else:
-                    loss = config.loss(expected, predicted)
+            if isinstance(config.loss, CategoricalCrossentropy):
+                # This approach is used because the current autograd implementation does not support
+                # the computation of the Jacobian matrix, which is necessary for calculating the gradient.
+                # TODO: Implement the Jacobian matrix in the autograd system and remove this workaround.
+                batch_loss = op.cce(predicted, expected)
+            else:
+                batch_loss = config.loss(expected, predicted)
 
-                losses.append(float(loss.item()))
+            losses.extend([l.item() for l in batch_loss])
 
-                loss.backward()
-
-                for layer in self._trainable_layers:
-                    layer.backward()
+            batch_loss.backward()
 
             config.optimizer(config.lr.learning_rate, layers=self._trainable_layers)
 

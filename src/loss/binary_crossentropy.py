@@ -12,21 +12,16 @@ class BinaryCrossentropy(Loss):
     BinaryCrossentropy loss class for binary classification tasks.
     """
 
-    @staticmethod
     def __call__(
-        expected: Tensor[np.floating] | np.integer | np.floating,
-        predicted: Tensor[np.floating] | np.integer | np.floating,
+        self,
+        expected: Tensor[np.floating],
+        predicted: Tensor[np.floating],
     ) -> Tensor[np.floating]:
-        if not isinstance(predicted, Tensor):
-            predicted = Tensor(predicted, dtype=np.float32)
-
         if isinstance(expected, Tensor):
             if expected.shape != predicted.shape:
                 raise ValueError(
                     f"Shape mismatch: expected {expected.shape}, got {predicted.shape}"
                 )
-            if predicted.shape != (1,):
-                raise ValueError(f"Expected shape (1,), got {predicted.shape}")
 
         predicted.data = np.clip(predicted.data, c.EPSILON, 1 - c.EPSILON)
 

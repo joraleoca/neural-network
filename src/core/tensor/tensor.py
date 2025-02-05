@@ -197,6 +197,7 @@ class Tensor(MutableSequence[T]):
         return f"Tensor({self.data}, dtype={self.dtype}, requires_grad={self.requires_grad})"
 
     def __iter__(self):
+        #TODO: Make the iter return Tensors
         return iter(self.data)
 
     def __contains__(self, value: T) -> bool:

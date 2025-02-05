@@ -20,15 +20,15 @@ class BinaryEncoder[T](Encoder):
                 f"Must be 2 classes to use binary encoding. Got {len(self.classes)}"
             )
 
-    def encode(self, label: T) -> int:
+    def encode(self, label: T) -> Tensor[int]:
         """
         Encodes a given label into a binary value.
         Args:
             label (T): The label to encode.
         Returns:
-            int: The index of the label in the classes list.
+            Tensor[int]: The index of the label in the classes list.
         """
-        return self.classes.index(label)
+        return Tensor([self.classes.index(label)])
 
     def decode(self, encoded: Tensor[np.integer] | Tensor[np.floating]) -> T:
         """

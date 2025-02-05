@@ -22,11 +22,11 @@ class CategoricalCrossentropy(Function):
         predicted.data = predicted.data.clip(EPSILON, 1 - EPSILON)
 
         if inplace:
-            predicted.data = -np.sum(expected.data * np.log(predicted))
+            predicted.data = -np.sum(expected.data * np.log(predicted), axis=0)
             return predicted
 
         self.result = tensor.Tensor(
-            -np.sum(expected.data * np.log(predicted.data)),
+            -np.sum(expected.data * np.log(predicted.data), axis=0),
             dtype=predicted.dtype,
             requires_grad=predicted.requires_grad,
         )

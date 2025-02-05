@@ -76,7 +76,7 @@ class Pool(Layer, ABC):
             This method pads the input tensor `data` with the padding value specified in the instance variable `self.padding`.
             The padding is applied symmetrically along the height and width dimensions.
         """
-        pad_width = ((0, 0), (self.padding, self.padding), (self.padding, self.padding))
+        pad_width = ((0, 0), (0, 0), (self.padding, self.padding), (self.padding, self.padding))
         return op.pad(data, pad_width, value=const_val)
 
     def _output_dimensions(self, input_size: tuple[int, ...]) -> tuple[int, ...]:

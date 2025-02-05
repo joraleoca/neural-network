@@ -32,6 +32,7 @@ class Mean(Function):
 
         return self.result
 
+    #TODO: Fix
     def backward(self) -> None:
         a = self.args[0]
         grad = self.result.grad

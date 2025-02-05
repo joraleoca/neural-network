@@ -108,21 +108,21 @@ class Convolution(Trainable):
                 If the input data does not have 3 dimensions.
                 If the number of input channels does not match the expected number of input channels.
         """
-        if data.ndim != 3:
-            if data.ndim == 2:
+        if data.ndim != 4:
+            if data.ndim == 3:
                 data = op.expand_dims(data, 0)
             else:
                 raise ValueError(
-                    f"Expected 3D input (channels, height, width). Got {data.shape}"
+                    f"Expected 4D input (batch, channels, height, width). Got {data.shape}"
                 )
 
-        if hasattr(self, "_in_channels") and data.shape[0] != self._in_channels:
+        if hasattr(self, "_in_channels") and data.shape[1] != self._in_channels:
             raise ValueError(
-                f"The input must have {self._in_channels} channels. Got {data.shape[0]}"
+                f"The input must have {self._in_channels} channels. Got {data.shape[1]}"
             )
 
         if not hasattr(self, "weights"):
-            self._in_channels = data.shape[0]
+            self._in_channels = data.shape[1]
 
             self.weights = self.initializer.initialize(
                 (self._out_channels, self._in_channels) + self.kernel_size,
@@ -139,16 +139,14 @@ class Convolution(Trainable):
             )
 
         kernel_height, kernel_width = self.weights.shape[-2:]
+        batch_size = data.shape[0]
 
-        data.dtype = np.float32
-
-        # Padding not applied in the channels dimensions
-        pad_width = ((0, 0), (self.padding, self.padding), (self.padding, self.padding))
+        pad_width = ((0, 0), (0, 0), (self.padding, self.padding), (self.padding, self.padding))
         data = op.pad(data, pad_width, value=data.dtype.type(0))
-
 
         windows = op.compose([
             data[
+                :,
                 :,
                 i : i + kernel_height,
                 j : j + kernel_width,
@@ -157,7 +155,9 @@ class Convolution(Trainable):
             for j in range(0, output_width * self.stride, self.stride)
         ])
 
-        windows = windows.reshape((output_height, output_width, self._in_channels, kernel_height, kernel_width))
+        windows = windows.reshape(
+            (batch_size, output_height, output_width, self._in_channels, kernel_height, kernel_width)
+        )
 
         out = [
             op.sum(self.weights[out_channel] * windows, axis=(-1, -2, -3)) + self.biases[out_channel]
@@ -165,6 +165,8 @@ class Convolution(Trainable):
         ]
         
         out = op.compose(out)
+
+        out = op.transpose(out, axes=(1, 0, 2, 3))
 
         if self.activation_function:
             out = self.activation_function(out)

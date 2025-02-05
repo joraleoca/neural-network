@@ -16,12 +16,12 @@ def assert_grad(arr: Tensor, grad: NDArray) -> None:
     assert np.allclose(arr.grad, grad), f"'{arr.grad}' should be {grad}"
 
 
-def assert_data(arr: Tensor, data: NDArray) -> None:
+def assert_data(arr: Tensor, data: Tensor | NDArray) -> None:
     """
     Asserts that the data of a given tensor matches the expected data.
     Args:
         arr (Tensor): The tensor whose data is to be checked.
-        data (NDArray): The expected data to compare against the tensor's data.
+        data (Tensor | NDArray): The expected data to compare against the tensor's data.
     Raises:
         AssertionError: If the tensor's data does not match the expected data.
     """

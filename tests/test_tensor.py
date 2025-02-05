@@ -47,19 +47,24 @@ class TestTensorOperations:
     @pytest.mark.parametrize(
         "op_func, input1, input2, expected",
         [
-            (lambda x, y: x + y, [1, 2, 3], [4, 5, 6], [5, 7, 9]),
-            (lambda x, y: x - y, [4, 5, 6], [1, 2, 3], [3, 3, 3]),
-            (lambda x, y: x * y, [1, 2, 3], [4, 5, 6], [4, 10, 18]),
-            (lambda x, y: x / y, [4, 9, 16], [2, 3, 4], [2, 3, 4]),
+            (lambda x, y: x + y, Tensor([1, 2, 3]), Tensor([4, 5, 6]), Tensor([5, 7, 9])),
+            (lambda x, y: x + y, [1, 2, 3], Tensor([4, 5, 6]), Tensor([5, 7, 9])),
+            (lambda x, y: x + y, Tensor([1, 2, 3]), [4, 5, 6], Tensor([5, 7, 9])),
+            (lambda x, y: x - y, Tensor([4, 5, 6]), Tensor([1, 2, 3]), Tensor([3, 3, 3])),
+            (lambda x, y: x - y, [4, 5, 6], Tensor([1, 2, 3]), Tensor([3, 3, 3])),
+            (lambda x, y: x - y, Tensor([4, 5, 6]), [1, 2, 3], Tensor([3, 3, 3])),
+            (lambda x, y: x * y, Tensor([1, 2, 3]), Tensor([4, 5, 6]), Tensor([4, 10, 18])),
+            (lambda x, y: x * y, [1, 2, 3], Tensor([4, 5, 6]), Tensor([4, 10, 18])),
+            (lambda x, y: x * y, Tensor([1, 2, 3]), [4, 5, 6], Tensor([4, 10, 18])),
+            (lambda x, y: x / y, Tensor([4, 9, 16]), Tensor([2, 3, 4]), Tensor([2, 3, 4])),
+            (lambda x, y: x / y, [4, 9, 16], Tensor([2, 3, 4]), Tensor([2, 3, 4])),
+            (lambda x, y: x / y, Tensor([4, 9, 16]), [2, 3, 4], Tensor([2, 3, 4])),
         ],
     )
     def test_tensor_binary_operations(self, op_func, input1, input2, expected):
         """Comprehensive test for tensor binary operations."""
-        tensor1 = Tensor(input1, dtype=np.float32)
-        tensor2 = Tensor(input2, dtype=np.float32)
-
-        result = op_func(tensor1, tensor2)
-        assert_data(result, np.array(expected, dtype=np.float32))
+        result = op_func(input1, input2)
+        assert_data(result, expected)
 
     @pytest.mark.parametrize(
         "input_data, expected",
@@ -156,7 +161,7 @@ class TestTensorShapeOperations:
             (3,),
         ],
     )
-    def test_tensor_reshape_error_cases(self, sample_2d_tensor, invalid_shape):
+    def test_tensor_reshape_error_cases(self, sample_2d_tensor, invalid_shape: tuple[int, ...]):
         """Test reshape with invalid shapes."""
         with pytest.raises(ValueError):
             sample_2d_tensor.reshape(invalid_shape)

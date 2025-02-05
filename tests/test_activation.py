@@ -4,6 +4,7 @@ import numpy as np
 from utils import assert_data, assert_grad
 from src.core import Tensor
 from src.activation import LeakyRelu, Relu, Sigmoid, Softmax, Tanh
+from src.activation import activation_from_name
 
 
 class TestActivation:
@@ -42,6 +43,11 @@ class TestActivation:
 
         assert_grad(x, expected_grad_input)
 
+    @pytest.mark.parametrize("alpha", [-0.01, 0, -1.0])
+    def test_leaky_relu_invalid_alpha(self, alpha):
+        with pytest.raises(ValueError):
+            LeakyRelu(alpha=alpha)
+
 
 class TestSoftmax:
     @pytest.fixture()
@@ -58,3 +64,28 @@ class TestSoftmax:
         assert_data(output, expected_output)
 
     # Softmax backwards is not implemented
+
+
+class TestActivationUtils:
+    @pytest.mark.parametrize(
+        "name, class_type",
+        [
+            (Relu.__name__, Relu),
+            (LeakyRelu.__name__, LeakyRelu),
+            (Sigmoid.__name__, Sigmoid),
+            (Tanh.__name__, Tanh),
+            (Softmax.__name__, Softmax),
+        ],
+    )
+    def test_activation_from_name(self, name, class_type):
+        assert activation_from_name(name) == class_type
+
+    @pytest.mark.parametrize("invalid_name", [
+        "activation_test",
+        "relu",
+        "",
+        "Unknown"
+    ])
+    def test_activation_from_name_error(self, invalid_name):
+        with pytest.raises(ValueError):
+            activation_from_name(invalid_name)

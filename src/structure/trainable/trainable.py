@@ -17,9 +17,6 @@ class Trainable(Layer, ABC):
         "activation_function",
         "rng",
         "_requires_grad",
-        "_weights_grad",
-        "_biases_grad",
-        "_times_grad",
         "_initializer",
     ]
 
@@ -32,19 +29,11 @@ class Trainable(Layer, ABC):
 
     _requires_grad: bool
 
-    _weights_grad: Tensor[np.floating] | None
-    _biases_grad: Tensor[np.floating] | None
-
-    _times_grad: int
-
     # Store only to use the first time forward is called, after that deleted
     _initializer: Initializer | None
 
     def __init__(self, requires_grad: bool = False) -> None:
         self._requires_grad = requires_grad
-        self._weights_grad = None
-        self._biases_grad = None
-        self._times_grad = 0
 
     @property
     def requires_grad(self) -> bool:
@@ -60,19 +49,16 @@ class Trainable(Layer, ABC):
 
         if not requires_grad:
             self.clear_params_grad()
-            # Clean memory
-            self._weights_grad = None
-            self._biases_grad = None
 
     @property
     def weights_grad(self) -> Tensor[np.floating]:
         """Returns the accumulated gradients of the weights."""
-        return self._weights_grad / self._times_grad
+        return self.weights.grad
 
     @property
     def biases_grad(self) -> Tensor[np.floating]:
         """Returns the accumulated gradients of the biases."""
-        return self._biases_grad / self._times_grad
+        return self.biases.grad
 
     @property
     def initializer(self) -> Initializer | None:
@@ -84,30 +70,10 @@ class Trainable(Layer, ABC):
         """Sets the initializer of the layer."""
         self._initializer = initializer
 
-    def backward(self) -> None:
-        """
-        Accumulates the gradients of the layer parameters.\n
-        The gradients of these are cleared.
-        """
-        if self._weights_grad is None or self._biases_grad is None:
-            self._weights_grad = deepcopy(self.weights.grad)
-            self._biases_grad = deepcopy(self.biases.grad)
-            self._times_grad = 1
-        else:
-            self._weights_grad += self.weights.grad
-            self._biases_grad += self.biases.grad
-            self._times_grad += 1
-
-        self.weights.clear_grad()
-        self.biases.clear_grad()
-
     def clear_params_grad(self) -> None:
         """Clears the gradient of the layer or initializes it if it does not exist."""
         self.weights.clear_grad()
         self.biases.clear_grad()
-        self._weights_grad.fill(0.0)
-        self._biases_grad.fill(0.0)
-        self._times_grad = 0
 
     @property
     @abstractmethod

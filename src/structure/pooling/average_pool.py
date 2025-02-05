@@ -8,14 +8,15 @@ from src.core import Tensor, op
 
 class AveragePool(Pool):
     def forward(self, data: Tensor[np.floating]) -> Tensor[np.floating]:
-        # Padding not applied in the channels dimensions
         data = self._pad(data, const_val=data.dtype.type(0))
 
         output_height, output_width = self._output_dimensions(data.shape[-2:])
+        batch_size = data.shape[0]
 
         windows = op.compose([
             data[
-                :,  # Extract all the input channels
+                :,
+                :,
                 i : i + self.filter_size[1],
                 j : j + self.filter_size[0],
             ]
@@ -24,10 +25,10 @@ class AveragePool(Pool):
         ])
 
         windows = windows.reshape(
-            (output_height, output_width, self.channels, self.filter_size[1], self.filter_size[0])
+            (batch_size, output_height, output_width, self.channels, self.filter_size[1], self.filter_size[0])
         )
 
-        return op.transpose(op.mean(windows, axis=(-1, -2)), axes=(2, 0, 1))
+        return op.transpose(op.mean(windows, axis=(-1, -2)), axes=(0, 3, 1, 2))
 
     @staticmethod
     def from_data(data: dict[str, Any]) -> "AveragePool":
