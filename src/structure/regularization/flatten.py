@@ -14,7 +14,7 @@ class Flatten(Layer):
 
     rng: Generator
 
-    required_fields: ClassVar[set[str]] = set()
+    required_fields: ClassVar[tuple[str]] = tuple()
 
     def __init__(self, rng: Any = None) -> None:
         """

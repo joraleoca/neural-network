@@ -29,7 +29,7 @@ class Convolution(Trainable):
     stride: int
     padding: int
 
-    required_fields: ClassVar[set[str]] = (c.WEIGHT_PREFIX, c.BIAS_PREFIX, c.ACTIVATION_PREFIX, "stride", "padding")
+    required_fields: ClassVar[tuple[str]] = (c.WEIGHT_PREFIX, c.BIAS_PREFIX, c.ACTIVATION_PREFIX, "stride", "padding")
 
     def __init__(
         self,

@@ -19,7 +19,7 @@ class Dropout(Layer):
 
     rng: Generator
 
-    required_fields: ClassVar[set[str]] = ("p",)
+    required_fields: ClassVar[tuple[str]] = ("p",)
 
     def __init__(self, p: float = 0.0, rng: Any = None) -> None:
         """

@@ -21,7 +21,7 @@ class Pool(Layer, ABC):
     stride: int
     padding: int
 
-    required_fields: ClassVar[set[str]] = ("channels", "filter_size", "stride", "padding")
+    required_fields: ClassVar[tuple[str]] = ("channels", "filter_size", "stride", "padding")
 
     def __init__(
         self,

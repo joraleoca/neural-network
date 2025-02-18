@@ -8,7 +8,7 @@ from src.core import Tensor
 class Layer(ABC):
     """Abstract class for a layer in a neural network."""
 
-    required_fields: ClassVar[set[str]]
+    required_fields: ClassVar[tuple[str]]
 
     @abstractmethod
     def forward(
