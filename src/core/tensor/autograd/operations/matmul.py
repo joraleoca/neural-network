@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -20,7 +20,6 @@ class Matmul(Function):
 
         self.result = tensor.Tensor(
             a.data @ b.data,
-            dtype=a.dtype if a.dtype == b.dtype else np.floating,
             requires_grad=a.requires_grad or b.requires_grad,
         )
 
@@ -30,14 +29,14 @@ class Matmul(Function):
         a, b = self.args
         grad = self.result.grad
 
-        grad = np.atleast_2d(grad)
+        grad = cp.get_array_module(grad).atleast_2d(grad)
 
         if a.requires_grad:
-            gr = grad @ np.atleast_2d(b.data).T
+            gr = grad @ cp.get_array_module(b.data).atleast_2d(b.data).T
 
             update_tensor_grad(a, gr)
 
         if b.requires_grad:
-            gr = np.atleast_2d(a.data).T @ grad
+            gr = cp.get_array_module(a.data).atleast_2d(a.data).T @ grad
 
             update_tensor_grad(b, gr)

@@ -47,7 +47,7 @@ class CategoricalCrossentropy(Loss):
         # Calculate cross-entropy loss
         ce_loss = -op.sum(expected * op.log(predicted), axis=-1)
 
-        return ce_loss  # type: ignore
+        return ce_loss
 
     @staticmethod
     def encoder() -> type[Encoder]:

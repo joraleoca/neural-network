@@ -1,5 +1,5 @@
-import numpy as np
-from fontTools.varLib.instancer.solver import EPSILON
+import cupy as cp
+from src.constants import EPSILON
 
 from ..function import Function
 from ... import tensor
@@ -18,16 +18,16 @@ class CategoricalCrossentropy(Function):
 
     def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
         predicted, expected = self.args
+        xp = cp.get_array_module(*self.args)
 
         predicted.data = predicted.data.clip(EPSILON, 1 - EPSILON)
 
         if inplace:
-            predicted.data = -np.sum(expected.data * np.log(predicted), axis=0)
+            predicted.data = -xp.sum(expected.data * xp.log(predicted), axis=0)
             return predicted
 
         self.result = tensor.Tensor(
-            -np.sum(expected.data * np.log(predicted.data), axis=0),
-            dtype=predicted.dtype,
+            -xp.sum(expected.data * xp.log(predicted.data), axis=0),
             requires_grad=predicted.requires_grad,
         )
 

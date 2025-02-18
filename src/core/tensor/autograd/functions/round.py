@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -20,9 +20,9 @@ class Round(Function):
             a.data.round(self.decimals)
             return a
 
+        xp = cp.get_array_module(a.data)
         self.result = tensor.Tensor(
-            np.round(a.data, self.decimals),
-            dtype=a.dtype,
+            xp.round(a.data, self.decimals),
             requires_grad=a.requires_grad,
         )
 

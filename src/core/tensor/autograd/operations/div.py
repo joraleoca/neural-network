@@ -1,5 +1,3 @@
-import numpy as np
-
 from ..function import Function
 from ... import tensor
 from src.core.tensor.autograd.utils import update_tensor_grad
@@ -20,7 +18,6 @@ class Div(Function):
 
         self.result = tensor.Tensor(
             a.data / b.data,
-            dtype=a.dtype if a.dtype == b.dtype else np.floating,
             requires_grad=a.requires_grad or b.requires_grad,
         )
 

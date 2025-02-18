@@ -4,7 +4,7 @@ import numpy as np
 from src.core import Tensor, op
 import src.constants as c
 
-from utils import assert_grad, assert_data
+from .utils import assert_grad, assert_data
 from src import loss
 
 

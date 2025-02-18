@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -18,7 +18,6 @@ class Flatten(Function):
 
         self.result = tensor.Tensor(
             a.data.flatten(),
-            dtype=a.dtype,
             requires_grad=a.requires_grad,
         )
 
@@ -29,7 +28,8 @@ class Flatten(Function):
         grad = self.result.grad
 
         if a.requires_grad:
-            gr = np.reshape(grad, a.shape)
+            xp = cp.get_array_module(grad)
+            gr = xp.reshape(grad, a.shape)
 
             if a.grad is None:
                 a.grad = gr

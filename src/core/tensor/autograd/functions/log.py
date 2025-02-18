@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -12,14 +12,14 @@ class Log(Function):
 
     def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
         a = self.args[0]
+        xp = cp.get_array_module(a.data)
 
         if inplace:
-            a.data[:] = np.log(a.data)
+            a.data[:] = xp.log(a.data)
             return a
 
         self.result = tensor.Tensor(
-            np.log(a.data),
-            dtype=a.dtype,
+            xp.log(a.data),
             requires_grad=a.requires_grad,
         )
 

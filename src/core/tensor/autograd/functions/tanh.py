@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -12,14 +12,14 @@ class Tanh(Function):
 
     def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
         a = self.args[0]
+        xp = cp.get_array_module(a.data)
 
         if inplace:
-            a.data[:] = np.tanh(a.data)
+            a.data[:] = xp.tanh(a.data)
             return a
 
         self.result = tensor.Tensor(
-            np.tanh(a.data),
-            dtype=a.dtype,
+            xp.tanh(a.data),
             requires_grad=a.requires_grad,
         )
 
@@ -30,7 +30,7 @@ class Tanh(Function):
         grad = self.result.grad
 
         if a.requires_grad:
-            gr = grad * (1 - (np.tanh(a) ** 2))
+            gr = grad * (1 - (self.result.data ** 2))
 
             if a.grad is None:
                 a.grad = gr

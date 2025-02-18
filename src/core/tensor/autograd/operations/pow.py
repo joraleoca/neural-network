@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 import logging
 
 from ..function import Function
@@ -22,7 +22,6 @@ class Pow(Function):
 
         self.result = tensor.Tensor(
             a.data**b.data,
-            dtype=a.dtype if a.dtype == b.dtype else np.floating,
             requires_grad=a.requires_grad or b.requires_grad,
         )
 
@@ -38,12 +37,14 @@ class Pow(Function):
             update_tensor_grad(a, gr)
 
         if b.requires_grad:
-            if not np.all(a.data > 0):
+            xp = cp.get_array_module(a.data)
+            if not xp.all(a.data > 0):
                 logging.warning(
                     f"Cannot compute gradient with respect to b for a={a.data} <= 0. Gradient not modified."
                 )
                 return
-
-            gr = grad * (a.data**b.data * np.log(a.data + EPSILON))
+            
+            xp = cp.get_array_module(a.data, b.data)
+            gr = grad * (a.data**b.data * xp.log(a.data + EPSILON))
 
             update_tensor_grad(b, gr)

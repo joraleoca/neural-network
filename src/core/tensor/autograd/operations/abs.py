@@ -17,7 +17,6 @@ class Abs(Function):
 
         self.result = tensor.Tensor(
             abs(a.data),
-            dtype=a.dtype,
             requires_grad=a.requires_grad,
         )
 

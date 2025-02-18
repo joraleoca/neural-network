@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -20,10 +20,10 @@ class ExpandDims(Function):
             raise NotImplementedError("Inplace expand dims is not supported.")
 
         a = self.args[0]
+        xp = cp.get_array_module(a.data)
 
         self.result = tensor.Tensor(
-            np.expand_dims(a.data, self.axis),
-            dtype=a.dtype,
+            xp.expand_dims(a.data, self.axis),
             requires_grad=a.requires_grad,
         )
 
@@ -34,9 +34,10 @@ class ExpandDims(Function):
         grad = self.result.grad
 
         if a.requires_grad:
-            gr = np.reshape(grad, a.shape)
+            xp = cp.get_array_module(grad)
+            gr = xp.reshape(grad, a.shape)
 
             if a.grad is None:
                 a.grad = gr
             else:
-                a.grad += grad.reshape(a.shape)
+                a.grad += gr

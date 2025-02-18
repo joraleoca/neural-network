@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -20,9 +20,9 @@ class Transpose(Function):
             a.data.transpose(self.axes)
             return a
 
+        xp = cp.get_array_module(a.data)
         self.result = tensor.Tensor(
-            np.transpose(a.data, axes=self.axes),
-            dtype=a.dtype,
+            xp.transpose(a.data, axes=self.axes),
             requires_grad=a.requires_grad,
         )
 
@@ -40,7 +40,8 @@ class Transpose(Function):
                 for i, axis in enumerate(self.axes):
                      grad_axes[axis] = i
 
-            grad = np.transpose(grad, grad_axes)
+            xp = cp.get_array_module(a.data)
+            grad = xp.transpose(grad, grad_axes)
 
             if a.grad is None:
                 a.grad = grad

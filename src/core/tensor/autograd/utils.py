@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-import numpy as np
+import cupy as cp
 from numpy.typing import NDArray
 
 from src.core.tensor import tensor as t
@@ -15,8 +15,9 @@ def update_broadcast_grad(grad: NDArray, tensor: "t.Tensor") -> NDArray:
     Returns:
         The updated gradient.
     """
+    xp = cp.get_array_module(grad)
     if tensor.size == 1:
-        return np.atleast_1d(grad.sum())
+        return xp.atleast_1d(grad.sum())
 
     shape = list(grad.shape)
     tensor_shape = [0] * max(0, len(shape) - len(tensor.shape)) + list(tensor.shape)
@@ -35,7 +36,7 @@ def update_broadcast_grad(grad: NDArray, tensor: "t.Tensor") -> NDArray:
     grad = grad.sum(tuple(shapes_ones), keepdims=True)
     grad = grad.sum(tuple(shapes_news))
 
-    return grad
+    return xp.atleast_1d(grad)
 
 
 def update_tensor_grad(tensor: "t.Tensor", grad: NDArray) -> None:
@@ -45,7 +46,7 @@ def update_tensor_grad(tensor: "t.Tensor", grad: NDArray) -> None:
         tensor: The tensor whose gradient is to be updated.
         grad: The updated gradient.
     """
-    gr = np.atleast_1d(update_broadcast_grad(grad, tensor))
+    gr = update_broadcast_grad(grad, tensor)
 
     if tensor.grad is None:
         tensor.grad = deepcopy(gr)

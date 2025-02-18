@@ -21,7 +21,6 @@ class Compose(Function):
 
         self.result = tensor.Tensor(
             self.args,
-            dtype=self.args[0].dtype,
             requires_grad=any(t.requires_grad for t in self.args),
         )
 

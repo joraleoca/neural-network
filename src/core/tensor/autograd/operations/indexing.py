@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -21,7 +21,7 @@ class Index(Function):
 
         a = self.args[0]
 
-        self.result = tensor.Tensor(a.data[self.idx], dtype=a.dtype, requires_grad=a.requires_grad)
+        self.result = tensor.Tensor(a.data[self.idx], requires_grad=a.requires_grad)
 
         return self.result
 
@@ -32,7 +32,8 @@ class Index(Function):
 
         if a.requires_grad:
             if a.grad is None:
-                a.grad = np.zeros_like(a.data)
+                xp = cp.get_array_module(a.data)
+                a.grad = xp.zeros_like(a.data)
                 a.grad[self.idx] = deepcopy(grad)
             else:
                 a.grad[self.idx] += grad

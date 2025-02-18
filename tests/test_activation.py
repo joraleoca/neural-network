@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from utils import assert_data, assert_grad
+from .utils import assert_data, assert_grad
 from src.core import Tensor
 from src.activation import LeakyRelu, Relu, Sigmoid, Softmax, Tanh
 from src.activation import activation_from_name

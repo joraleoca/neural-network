@@ -3,9 +3,11 @@ from typing import SupportsIndex, TypeVar, Any
 from collections import deque
 from graphlib import TopologicalSorter
 
+import cupy as cp
 import numpy as np
 from numpy.typing import NDArray, ArrayLike, DTypeLike
 
+from ..config import Config
 from .autograd import (
     Function,
     operations as op,
@@ -13,7 +15,14 @@ from .autograd import (
 )
 
 
-T = TypeVar('T', bound=np.generic)
+T = TypeVar('T', bound=cp.generic)
+
+
+class _Device:
+    """Class with constants representing the available devices for tensor creation."""
+    CPU = "cpu"
+    CUDA = "cuda"
+    AUTO = "auto"
 
 
 class Tensor(MutableSequence[T]):
@@ -22,14 +31,14 @@ class Tensor(MutableSequence[T]):
     __slots__ = "data", "grad", "_requires_grad", "_grad_operation"
 
     data: NDArray[T]
-    grad: NDArray[np.floating] | None
+    grad: NDArray[cp.floating] | None
 
     _requires_grad: bool
 
     _grad_operation: Function | None
 
     def __init__(
-        self, data: ArrayLike, *, dtype: DTypeLike = None, requires_grad: bool = False
+        self, data: ArrayLike, *, dtype: DTypeLike = None, requires_grad: bool = False, device: str | None = None
     ):
         """
         Initialize a Tensor object.
@@ -41,15 +50,31 @@ class Tensor(MutableSequence[T]):
                 The desired data type for the tensor. If not provided, the data type will be inferred.
             requires_grad (bool, optional):
                 If True, the tensor will track gradients for automatic differentiation. Default is False.
-        Notes:
-            If `data` is another Tensor object, the new tensor will share the same data and gradient properties.
+            device (str | _Device): The device on which to create the tensor. 
+                Options:
+                    - "cpu"    : Create the tensor on the CPU.
+                    - "cuda"   : Create the tensor on the GPU (raises an error if not available).
+                    - "auto"   : Automatically choose the GPU if available, otherwise use the CPU.
         """
-        if isinstance(data, Tensor):
-            self.data = data.data.astype(dtype)
-        elif isinstance(data, np.ndarray):
-            self.data = data
-        else:
-            self.data = np.array(data, dtype=dtype)
+        if device is None:
+            device = Config.default_device
+
+        if device == _Device.CUDA and not cp.cuda.is_available():
+            raise ValueError("Cannot create tensor on 'cuda', GPU is not available.")
+
+        match device:
+            case _Device.CPU:
+                if isinstance(data, np.ndarray):
+                    self.data = data if dtype is None else data.astype(dtype)
+                else:
+                    self.data = np.array(data, dtype=dtype)
+            case _Device.CUDA | _Device.AUTO: 
+                if isinstance(data, cp.ndarray):
+                    self.data = data if dtype is None else data.astype(dtype)
+                else:
+                    self.data = cp.array(data, dtype=dtype)
+            case _:
+                raise ValueError(f"Unknown device {device}")
 
         self._requires_grad = requires_grad
         self._grad_operation = None
@@ -76,16 +101,17 @@ class Tensor(MutableSequence[T]):
         raise NotImplementedError("Insertion not supported for Tensor")
 
     def __array__(self, dtype: DTypeLike = None) -> NDArray[T]:
-        if dtype is None:
-            return self.data
-        return self.data.astype(dtype)
+        if self.device == _Device.CPU:
+            return self.data.astype(dtype)
+        
+        return cp.ndarray.get(self.data)
 
     def __neg__(self) -> "Tensor[T]":
         return self.apply_operation(op.Neg(self), inplace=False)
 
     def __add__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(op.Add(self, other), inplace=False)
 
     def __radd__(self, other: ArrayLike) -> "Tensor[T]":
@@ -93,40 +119,40 @@ class Tensor(MutableSequence[T]):
 
     def __iadd__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(op.Add(self, other), inplace=True)
 
     def __sub__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(op.Sub(self, other), inplace=False)
 
     def __rsub__(self, other: ArrayLike):
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return other.__sub__(self)
 
     def __isub__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(op.Sub(self, other), inplace=True)
 
     def __mul__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(op.Mul(self, other), inplace=False)
 
     def __rmul__(self, other: ArrayLike):
         return self.__mul__(other)
-
+    
     def __imul__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(op.Mul(self, other), inplace=True)
 
     def __truediv__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(op.Div(self, other), inplace=False)
 
     def __rtruediv__(self, other: ArrayLike) -> "Tensor[T]":
@@ -136,12 +162,12 @@ class Tensor(MutableSequence[T]):
 
     def __itruediv__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(op.Div(self, other), inplace=True)
 
     def __pow__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(op.Pow(self, other), inplace=False)
 
     def __rpow__(self, other: ArrayLike) -> "Tensor[T]":
@@ -151,12 +177,12 @@ class Tensor(MutableSequence[T]):
 
     def __ipow__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(operation=op.Pow(self, other), inplace=True)
 
     def __matmul__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(op.Matmul(self, other), inplace=False)
 
     def __rmatmul__(self, other: ArrayLike) -> "Tensor[T]":
@@ -166,26 +192,32 @@ class Tensor(MutableSequence[T]):
 
     def __imatmul__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
-            other = Tensor(other)
+            other = Tensor(other, device=self.device)
         return self.apply_operation(op.Matmul(self, other), inplace=True)
 
     def __eq__(self, other: ArrayLike) -> bool:
-        return np.array_equal(self.data, other)
+        xp = cp.get_array_module(self.data)
+        return xp.array_equal(self.data, other)
 
     def __ne__(self, other: ArrayLike) -> bool:
-        return not np.array_equal(self.data, other)
+        xp = cp.get_array_module(self.data)
+        return not xp.array_equal(self.data, other)
 
-    def __lt__(self, other: ArrayLike) -> NDArray[np.bool_]:
-        return np.less(self.data, other)
+    def __lt__(self, other: ArrayLike) -> NDArray[cp.bool_]:
+        xp = cp.get_array_module(self.data)
+        return xp.less(self.data, other)
 
-    def __le__(self, other: ArrayLike) -> NDArray[np.bool_]:
-        return np.less_equal(self.data, other)
+    def __le__(self, other: ArrayLike) -> NDArray[cp.bool_]:
+        xp = cp.get_array_module(self.data)
+        return xp.less_equal(self.data, other)
 
-    def __gt__(self, other: ArrayLike) -> NDArray[np.bool_]:
-        return np.greater(self.data, other)
+    def __gt__(self, other: ArrayLike) -> NDArray[cp.bool_]:
+        xp = cp.get_array_module(self.data)
+        return xp.greater(self.data, other)
 
-    def __ge__(self, other: ArrayLike) -> NDArray[np.bool_]:
-        return np.greater_equal(self.data, other)
+    def __ge__(self, other: ArrayLike) -> NDArray[cp.bool_]:
+        xp = cp.get_array_module(self.data)
+        return xp.greater_equal(self.data, other)
 
     def __abs__(self) -> "Tensor[T]":
         return self.apply_operation(inplace=False, operation=op.Abs(self))
@@ -222,12 +254,12 @@ class Tensor(MutableSequence[T]):
     """Properties"""
 
     @property
-    def dtype(self) -> np.dtype:
+    def dtype(self) -> cp.dtype:
         """Returns the data type (dtype) of the tensor."""
         return self.data.dtype
 
     @dtype.setter
-    def dtype(self, dtype: np.dtype) -> None:
+    def dtype(self, dtype: cp.dtype) -> None:
         """Sets the data type (dtype) of the tensor."""
         self.data = self.data.astype(dtype)
 
@@ -261,6 +293,24 @@ class Tensor(MutableSequence[T]):
         self.grad = None
         self._grad_operation = None
         self._requires_grad = requires_grad
+
+    @property
+    def device(self) -> str:
+        """
+        Returns the device on which the data is stored.
+        Returns:
+            str: One of "cuda", "cpu", or raises an exception if the device is unknown.
+        
+        Raises:
+            RuntimeError: If the data is neither a CuPy nor a NumPy array, indicating an unknown device.
+        """
+        if isinstance(self.data, cp.ndarray):
+            return _Device.CUDA
+        elif isinstance(self.data, np.ndarray):
+            return _Device.CPU
+        
+        raise RuntimeError(f"Unknown device for data of type {type(self.data)}")
+
 
     """Utils"""
 
@@ -405,7 +455,8 @@ class Tensor(MutableSequence[T]):
             return
 
         if self.grad is None:
-            self.grad = np.ones_like(self.data, dtype=np.floating)
+            xp = cp.get_array_module(self.data)
+            self.grad = xp.ones_like(self.data, dtype=xp.floating)
 
         graph = self._grad_graph()
 

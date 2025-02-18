@@ -37,7 +37,7 @@ pip install -r requirements.txt
 ## Requirements
 ### Core Requirements
 - Python 3.x
-- NumPy - for numerical computations
+- Cupy - for numerical computations
 
 ### Optional Dependencies
 - Matplotlib - for data visualization (only used for training debug)
@@ -48,20 +48,21 @@ pip install -r requirements.txt
 Here's a basic example of how to use the neural network:
 
 ```python
-from src import NeuralNetwork
+from src import NeuralNetwork, Config
 from src.core import Tensor
 from src.config import FeedForwardConfig, TrainingConfig
 from src.loss import CategoricalCrossentropy
 from src.activation import LeakyRelu, Softmax
 
+# Set the default device for all tensor operations, including those created internally by the neural network
+Config.set_default_device("cuda")
+
 # Prepare your data as numpy arrays
 X_train = Tensor(...)  # Your training data
 y_train = Tensor(...)  # Your training labels
-train_data = Tensor([(d, label[0]) for d, label in zip(X_train, y_train)], dtype=object)
 
 X_test = Tensor(...)  # Your testing data
 y_test = Tensor(...)  # Your testing labels
-test_data = Tensor([(d, label[0]) for d, label in zip(X_test, y_test)], dtype=object)
 
 config = FeedForwardConfig(
     network_structure=[X_train.shape[1], 64, 32, 16],
@@ -75,8 +76,10 @@ nn = NeuralNetwork(config)
 
 # Train the model
 nn.train(
-    list(train_data),
-    list(test_data),
+    X_train,
+    y_train,
+    X_test,
+    y_test,
     config=TrainingConfig(
         loss=CategoricalCrossentropy()
     ),

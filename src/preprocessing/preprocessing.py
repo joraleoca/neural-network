@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -6,16 +8,16 @@ from src.core import Tensor
 
 
 def min_max_scaler(
-    data: Tensor[np.floating] | NDArray[np.floating], min_val: float, max_val: float
+    data: Tensor[np.floating] | NDArray[np.floating], min_val: float, max_val: float,
 ) -> Tensor[np.floating]:
     """
     Scales the input data to a specified range [min, max] using min-max normalization.
     Parameters:
-        data (NDArray[np.floating]): The input data to be scaled. It should be a NumPy array of floating-point numbers.
+        data (Tensor[np.floating] | NDArray[np.floating]): The input data to be scaled. It should be a NumPy array of floating-point numbers.
         min_val (float): The minimum value of the desired range.
         max_val (float): The maximum value of the desired range.
     Returns:
-        NDArray[np.floating]: The scaled data with values in the range [min, max].
+        Tensor[np.floating]: The scaled data with values in the range [min, max].
     Raises:
         ValueError if min is greater than max
     """
@@ -25,37 +27,39 @@ def min_max_scaler(
     data_std = (data - data.min(axis=0)) / (data.max(axis=0) - data.min(axis=0) + EPSILON)
     return Tensor(data_std * (max_val - min_val) + min_val)
 
-
 def train_test_split(
-    data: NDArray,
+    data: Tensor | NDArray,
+    expected: Tensor | NDArray,
     *,
     train_size: int | float | None = None,
     test_size: int | float | None = None,
-    random_state=None,
     shuffle: bool = True,
-) -> tuple[NDArray, NDArray]:
+    random_state = None,
+) -> tuple[Tensor, Tensor, Tensor, Tensor]:
     """
-    Splits the data into training and testing sets.
-    Parameters:
-        data (NDArray): The data to be split.
-        train_size (int, float, or None):
-            If int, represents the absolute number of train samples.\n
-            If float, represents the proportion of the dataset to include in the train split.\n
-            If None, the value is set to 0.75.
-        test_size (int, float, or None):
-            If int, represents the absolute number of test samples.\n
-            If float, represents the proportion of the dataset to include in the test split.\n
-            If None, the value is set to the complement of train_size.
-        random_state: Controls the shuffling applied to the data before applying the split.
-        shuffle (bool, optional): Whether to shuffle the data before splitting. Default is True.
+    Split the data into random train and test subsets.
+
+    Args:
+        data (Tensor): The data to be split.
+        expected (Tensor): The expected output corresponding to the data.
+        train_size (int, float, or None, optional): 
+            If int, represents the absolute number of train samples.
+            If float, represents the proportion of the dataset to include in the train split.
+            If None, the value is set to 0.75. Default is None.
+        test_size (int, float, or None, optional): 
+            If int, represents the absolute number of test samples.
+            If float, represents the proportion of the dataset to include in the test split.
+            If None, the value is set to the complement of train_size. Default is None.
+        random_state (int, optional): Controls the shuffling applied to the data before applying the split. Default is None.
+
     Returns:
-        tuple[NDArray, NDArray]: A tuple containing the training data and the testing data in that order.
-    Raises:
-        ValueError:
-            If `train_size` and `test_size` do not sum up to the number of samples in `data`.
-        TypeError:
-            If `train_size` or `test_size` are not int, float, or None.
+        tuple[Tensor, Tensor, Tensor, Tensor]: The split data (data_train, expected_train, data_test, expected_test).
+
+    ValueError: If `train_size` and `test_size` do not sum up to the number of samples in `data`.
+    TypeError: If `train_size` or `test_size` are not int, float, or None.
     """
+    data = list(zip(data, expected))
+
     n_samples = len(data)
 
     if train_size is None and test_size is None:
@@ -68,7 +72,7 @@ def train_test_split(
     elif train_size is None:
         train_count = n_samples - (
             int(test_size * n_samples) if isinstance(test_size, float) else test_size
-        )  # type: ignore
+        )
     else:
         raise TypeError("train_size must be int, float, or None")
 
@@ -87,11 +91,12 @@ def train_test_split(
         )
 
     if shuffle:
-        rng = np.random.default_rng(random_state)
-        indices = rng.permutation(n_samples)
-    else:
-        indices = np.arange(n_samples)
+        random.Random(random_state).shuffle(data)
 
-    return data[indices[:train_count]], data[
-        indices[train_count : train_count + test_count]
-    ]
+    train_data = data[:train_count]
+    test_data = data[train_count : train_count + test_count]
+
+    data_train, expected_train = zip(*train_data)
+    data_test, expected_test = zip(*test_data)
+
+    return data_train, expected_train, data_test, expected_test

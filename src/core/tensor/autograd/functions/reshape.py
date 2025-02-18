@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -20,9 +20,9 @@ class Reshape(Function):
             a.data.reshape(self.shape)
             return a
 
+        xp = cp.get_array_module(a.data)
         self.result = tensor.Tensor(
-            np.reshape(a.data, self.shape),
-            dtype=a.dtype,
+            xp.reshape(a.data, self.shape),
             requires_grad=a.requires_grad,
         )
 
@@ -33,7 +33,8 @@ class Reshape(Function):
         grad = self.result.grad
 
         if a.requires_grad:
-            gr = np.reshape(grad, a.data.shape)
+            xp = cp.get_array_module(grad)
+            gr = xp.reshape(grad, a.data.shape)
 
             if a.grad is None:
                 a.grad = gr

@@ -253,7 +253,7 @@ def compose(tensors: list[Tensor[T]] | tuple[Tensor[T], ...]) -> Tensor[T]:
     Returns:
         New tensor composed of the tensors.
     """
-    # The tensor used to apply operation doesn't matter
+    # The tensor used to apply operation doesn't matter, and the first tensor will always exist.
     return tensors[0].apply_operation(func.Compose(tensors))
 
 def cce(predicted: Tensor[T], expected: Tensor[T]) -> Tensor[T]:

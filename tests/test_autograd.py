@@ -4,7 +4,7 @@ from src.core import Tensor
 from src.core.tensor import op
 from src.constants import EPSILON
 
-from utils import assert_grad
+from .utils import assert_grad
 
 
 class TestUnaryOperations:

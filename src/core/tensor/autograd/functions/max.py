@@ -1,6 +1,6 @@
 from typing import SupportsIndex, Sequence
 
-import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -30,7 +30,6 @@ class Max(Function):
 
         self.result = tensor.Tensor(
             a.data.max(axis=self.axis, keepdims=self.keepdims),
-            dtype=a.dtype,
             requires_grad=a.requires_grad,
         )
 
@@ -44,7 +43,8 @@ class Max(Function):
             mask = a.data == a.data.max(axis=self.axis, keepdims=True)
 
             if self.axis and not self.keepdims:
-                grad = np.expand_dims(grad, self.axis)
+                xp = cp.get_array_module(grad)
+                grad = xp.expand_dims(grad, self.axis)
 
             gr = grad * mask
 

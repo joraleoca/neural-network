@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 
 from .activation import ActivationFunction
 from src.core import Tensor
@@ -31,4 +31,5 @@ class LeakyRelu(ActivationFunction):
         self.ALPHA = alpha
 
     def __call__[T](self, arr: Tensor[T]) -> Tensor[T]:
-        return arr * np.where(arr > 0, 1, self.ALPHA)
+        xp = cp.get_array_module(arr.data)
+        return arr * xp.where(arr > 0, 1, self.ALPHA)

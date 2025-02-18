@@ -17,7 +17,6 @@ class Neg(Function):
 
         self.result = tensor.Tensor(
             -a.data,
-            dtype=a.dtype,
             requires_grad=a.requires_grad,
         )
 

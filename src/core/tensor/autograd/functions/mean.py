@@ -1,4 +1,5 @@
 import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -26,26 +27,29 @@ class Mean(Function):
 
         self.result = tensor.Tensor(
             a.data.mean(axis=self.axis),
-            dtype=a.dtype,
             requires_grad=a.requires_grad,
         )
 
         return self.result
 
-    #TODO: Fix
     def backward(self) -> None:
         a = self.args[0]
         grad = self.result.grad
+        xp = cp.get_array_module(grad)
 
         if a.requires_grad:
-            if self.axis is not None:
-                grad = np.expand_dims(grad, self.axis)
+            n = a.data.size
 
-            n = (
-                a.data.size
-                if self.axis is None
-                else np.prod([a.data.shape[i] for i in np.atleast_1d(self.axis)])
-            )
+            if grad.size == 1:
+                grad = xp.broadcast_to(grad, a.shape)
+            else:
+                axis_ = self.axis if isinstance(self.axis, tuple) else (self.axis,)
+                if self.axis is not None:
+                    xp = cp.get_array_module(grad)
+                    grad = xp.expand_dims(grad, axis_)
+
+                    n = np.prod([a.data.shape[i] for i in axis_])
+                
             gr = grad / n
 
             if a.grad is None:

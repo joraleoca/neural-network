@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 
 from ..function import Function
 from ... import tensor
@@ -22,12 +22,12 @@ class Pad(Function):
             raise NotImplementedError("Inplace padding is not supported.")
 
         a = self.args[0]
+        xp = cp.get_array_module(a.data)
 
         self.result = tensor.Tensor(
-            np.pad(
-                a, pad_width=self.pad_width, mode="constant", constant_values=self.value
+            xp.pad(
+                a.data, pad_width=self.pad_width, mode="constant", constant_values=self.value
             ),
-            dtype=a.dtype,
             requires_grad=a.requires_grad,
         )
 
