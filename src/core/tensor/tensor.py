@@ -197,26 +197,30 @@ class Tensor(MutableSequence[T]):
 
     def __eq__(self, other: ArrayLike) -> bool:
         xp = cp.get_array_module(self.data)
+        other = xp.array(other)
         return xp.array_equal(self.data, other)
 
     def __ne__(self, other: ArrayLike) -> bool:
-        xp = cp.get_array_module(self.data)
-        return not xp.array_equal(self.data, other)
+        return not self.__eq__(other)
 
     def __lt__(self, other: ArrayLike) -> NDArray[cp.bool_]:
         xp = cp.get_array_module(self.data)
+        other = xp.array(other)
         return xp.less(self.data, other)
 
     def __le__(self, other: ArrayLike) -> NDArray[cp.bool_]:
         xp = cp.get_array_module(self.data)
+        other = xp.array(other)
         return xp.less_equal(self.data, other)
 
     def __gt__(self, other: ArrayLike) -> NDArray[cp.bool_]:
         xp = cp.get_array_module(self.data)
+        other = xp.array(other)
         return xp.greater(self.data, other)
 
     def __ge__(self, other: ArrayLike) -> NDArray[cp.bool_]:
         xp = cp.get_array_module(self.data)
+        other = xp.array(other)
         return xp.greater_equal(self.data, other)
 
     def __abs__(self) -> "Tensor[T]":
