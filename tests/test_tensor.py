@@ -31,11 +31,21 @@ class TestTensorCreation:
     )
     def test_cpu_creation(self, device):
         """Test tensor creation on devices."""
+        if device == "cuda":
+            try:
+                cuda = cp.cuda.is_available()
+            except Exception:
+                cuda = False
+
+            if not cuda:
+                pytest.skip("Cuda is not available in the system")
+
         data = [1, 2, 3]
         tensor = Tensor(data, dtype=np.float32, device=device)
         assert_data(tensor, np.array(data, dtype=np.float32))
-        assert tensor.device == device, f"Tensor device {tensor.device} should be {device}"
-
+        assert tensor.device == device, (
+            f"Tensor device {tensor.device} should be {device}"
+        )
 
     def test_creation_with_grad(self):
         """Test tensor creation with gradient tracking enabled."""
@@ -64,16 +74,36 @@ class TestTensorOperations:
     @pytest.mark.parametrize(
         "op_func, input1, input2, expected",
         [
-            (lambda x, y: x + y, Tensor([1, 2, 3]), Tensor([4, 5, 6]), Tensor([5, 7, 9])),
+            (
+                lambda x, y: x + y,
+                Tensor([1, 2, 3]),
+                Tensor([4, 5, 6]),
+                Tensor([5, 7, 9]),
+            ),
             (lambda x, y: x + y, [1, 2, 3], Tensor([4, 5, 6]), Tensor([5, 7, 9])),
             (lambda x, y: x + y, Tensor([1, 2, 3]), [4, 5, 6], Tensor([5, 7, 9])),
-            (lambda x, y: x - y, Tensor([4, 5, 6]), Tensor([1, 2, 3]), Tensor([3, 3, 3])),
+            (
+                lambda x, y: x - y,
+                Tensor([4, 5, 6]),
+                Tensor([1, 2, 3]),
+                Tensor([3, 3, 3]),
+            ),
             (lambda x, y: x - y, [4, 5, 6], Tensor([1, 2, 3]), Tensor([3, 3, 3])),
             (lambda x, y: x - y, Tensor([4, 5, 6]), [1, 2, 3], Tensor([3, 3, 3])),
-            (lambda x, y: x * y, Tensor([1, 2, 3]), Tensor([4, 5, 6]), Tensor([4, 10, 18])),
+            (
+                lambda x, y: x * y,
+                Tensor([1, 2, 3]),
+                Tensor([4, 5, 6]),
+                Tensor([4, 10, 18]),
+            ),
             (lambda x, y: x * y, [1, 2, 3], Tensor([4, 5, 6]), Tensor([4, 10, 18])),
             (lambda x, y: x * y, Tensor([1, 2, 3]), [4, 5, 6], Tensor([4, 10, 18])),
-            (lambda x, y: x / y, Tensor([4, 9, 16]), Tensor([2, 3, 4]), Tensor([2, 3, 4])),
+            (
+                lambda x, y: x / y,
+                Tensor([4, 9, 16]),
+                Tensor([2, 3, 4]),
+                Tensor([2, 3, 4]),
+            ),
             (lambda x, y: x / y, [4, 9, 16], Tensor([2, 3, 4]), Tensor([2, 3, 4])),
             (lambda x, y: x / y, Tensor([4, 9, 16]), [2, 3, 4], Tensor([2, 3, 4])),
         ],
@@ -147,7 +177,6 @@ class TestTensorReduction:
         assert_data(result, np.array(expected, dtype=np.float32))
 
 
-
 class TestTensorShapeOperations:
     @pytest.mark.parametrize(
         "target_shape, expected_data",
@@ -163,7 +192,9 @@ class TestTensorShapeOperations:
         assert_data(
             result, np.array(expected_data, dtype=np.float32).reshape(target_shape)
         )
-        assert result.shape == target_shape, f"Result shape {result.shape} should be {target_shape}, Error in reshape"
+        assert result.shape == target_shape, (
+            f"Result shape {result.shape} should be {target_shape}, Error in reshape"
+        )
 
     @pytest.mark.parametrize(
         "invalid_shape",
@@ -173,7 +204,9 @@ class TestTensorShapeOperations:
             (3,),
         ],
     )
-    def test_reshape_error_cases(self, sample_2d_tensor, invalid_shape: tuple[int, ...]):
+    def test_reshape_error_cases(
+        self, sample_2d_tensor, invalid_shape: tuple[int, ...]
+    ):
         """Test reshape with invalid shapes."""
         with pytest.raises(ValueError):
             sample_2d_tensor.reshape(invalid_shape)

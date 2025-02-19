@@ -16,7 +16,7 @@ class Convolution(Trainable):
     __slots__ = [
         "_in_channels",
         "_out_channels",
-        "kernel_size",
+        "kernel_shape",
         "stride",
         "padding",
     ]
@@ -24,17 +24,23 @@ class Convolution(Trainable):
     _in_channels: int
     _out_channels: int
 
-    kernel_size: tuple[int, int]
+    kernel_shape: tuple[int, int]
 
     stride: int
     padding: int
 
-    required_fields: ClassVar[tuple[str]] = (c.WEIGHT_PREFIX, c.BIAS_PREFIX, c.ACTIVATION_PREFIX, "stride", "padding")
+    required_fields: ClassVar[tuple[str]] = (
+        c.WEIGHT_PREFIX,
+        c.BIAS_PREFIX,
+        c.ACTIVATION_PREFIX,
+        "stride",
+        "padding",
+    )
 
     def __init__(
         self,
         channels: int | tuple[int, int],
-        kernel_size: tuple[int, int],
+        kernel_shape: tuple[int, int],
         activation_function: ActivationFunction | None = None,
         initializer: Initializer = LeCunNormal(),
         *,
@@ -49,7 +55,7 @@ class Convolution(Trainable):
             channels (int | tuple[int, int]):
                 If int, the number of output channels\n
                 If tuple, the number of (in channels, out channels)
-            kernel_size (tuple[int, int]): The size of the kernel.
+            kernel_shape (tuple[int, int]): The size of the kernel.
             initializer (Initializer): The initializer for the weights of this layer.
             stride (int): The stride of the convolution operation.
             padding (int): The padding of the convolution operation.
@@ -59,9 +65,9 @@ class Convolution(Trainable):
             raise ValueError(f"The stride value must be positive. Got {stride}")
         if padding < 0:
             raise ValueError(f"The padding value must be non-negative. Got {padding}")
-        if len(kernel_size) != 2:
+        if len(kernel_shape) != 2:
             raise ValueError(
-                f"The kernel size must have 2 dimension. Got {len(kernel_size)}"
+                f"The kernel size must have 2 dimension. Got {len(kernel_shape)}"
             )
 
         super().__init__()
@@ -75,7 +81,7 @@ class Convolution(Trainable):
                 )
 
             self.weights = initializer.initialize(
-                (self._out_channels, self._in_channels) + kernel_size,
+                (self._out_channels, self._in_channels) + kernel_shape,
                 rng=rng,
             )
         else:
@@ -90,7 +96,7 @@ class Convolution(Trainable):
         self.initializer = initializer
         self.stride = stride
         self.padding = padding
-        self.kernel_size = kernel_size
+        self.kernel_shape = kernel_shape
         self.rng = rng
 
     def forward(
@@ -125,7 +131,7 @@ class Convolution(Trainable):
             self._in_channels = data.shape[1]
 
             self.weights = self.initializer.initialize(
-                (self._out_channels, self._in_channels) + self.kernel_size,
+                (self._out_channels, self._in_channels) + self.kernel_shape,
                 requires_grad=self.requires_grad,
                 rng=self.rng,
             )
@@ -134,36 +140,51 @@ class Convolution(Trainable):
 
         if not hasattr(self, "biases"):
             self.biases = op.zeros(
-                (self._out_channels, output_height, output_width),
-                requires_grad=self.requires_grad
+                (self._out_channels, 1, 1),
+                requires_grad=self.requires_grad,
             )
 
         kernel_height, kernel_width = self.weights.shape[-2:]
         batch_size = data.shape[0]
 
-        pad_width = ((0, 0), (0, 0), (self.padding, self.padding), (self.padding, self.padding))
+        pad_width = (
+            (0, 0),
+            (0, 0),
+            (self.padding, self.padding),
+            (self.padding, self.padding),
+        )
         data = op.pad(data, pad_width, value=data.dtype.type(0))
 
-        windows = op.compose([
-            data[
-                :,
-                :,
-                i : i + kernel_height,
-                j : j + kernel_width,
+        windows = op.compose(
+            [
+                data[
+                    :,
+                    :,
+                    i : i + kernel_height,
+                    j : j + kernel_width,
+                ]
+                for i in range(0, output_height * self.stride, self.stride)
+                for j in range(0, output_width * self.stride, self.stride)
             ]
-            for i in range(0, output_height * self.stride, self.stride)
-            for j in range(0, output_width * self.stride, self.stride)
-        ])
+        )
 
         windows = windows.reshape(
-            (batch_size, output_height, output_width, self._in_channels, kernel_height, kernel_width)
+            (
+                batch_size,
+                output_height,
+                output_width,
+                self._in_channels,
+                kernel_height,
+                kernel_width,
+            )
         )
 
         out = [
-            op.sum(self.weights[out_channel] * windows, axis=(-1, -2, -3)) + self.biases[out_channel]
+            op.sum(self.weights[out_channel] * windows, axis=(-1, -2, -3))
+            + self.biases[out_channel]
             for out_channel in range(self._out_channels)
         ]
-        
+
         out = op.compose(out)
 
         out = op.transpose(out, axes=(1, 0, 2, 3))
@@ -213,12 +234,18 @@ class Convolution(Trainable):
         out_channels, in_channels, kernel_height, kernel_width = weights.shape
 
         layer = Convolution(
-            out_channels, kernel_height, kernel_width, stride=data["stride"], padding=data["padding"]
+            out_channels,
+            kernel_height,
+            kernel_width,
+            stride=data["stride"],
+            padding=data["padding"],
         )
 
         layer._in_channels = in_channels
         layer.weights = Tensor(weights)
         layer.biases = Tensor(data[c.BIAS_PREFIX])
-        layer.activation_function = activation_from_name(data[c.ACTIVATION_PREFIX].item())()
+        layer.activation_function = activation_from_name(
+            data[c.ACTIVATION_PREFIX].item()
+        )()
 
         return layer

@@ -8,22 +8,28 @@ from src.activation import activation_from_name
 
 
 class TestActivation:
+    @pytest.fixture(scope="class")
+    def data(self) -> Tensor:
+        return Tensor(np.array([-1.0, 0.0, 1.0, 2.0]))
+
     @pytest.mark.parametrize(
-        "operation, expected_output",
+        "operation, expected_func",
         [
-            (LeakyRelu(alpha=0.01), np.array([-0.01, 0.0, 1.0, 2.0])),
-            (Relu(), np.array([0.0, 0.0, 1.0, 2.0])),
-            (Sigmoid(), 1 / (1 + np.exp(-np.array([-1.0, 0.0, 1.0, 2.0])))),
-            (Tanh(), np.tanh(np.array([-1.0, 0.0, 1.0, 2.0]))),
+            (LeakyRelu(alpha=0.01), lambda x: np.where(x > 0, x, 0.01 * x)),
+            (Relu(), lambda x: np.where(x > 0, x, 0)),
+            (Sigmoid(), lambda x: 1 / (1 + np.exp(-x))),
+            (
+                Softmax(),
+                lambda x: np.exp(x - x.max()) / np.sum(np.exp(x - x.max())),
+            ),
+            (Tanh(), lambda x: np.tanh(x)),
         ],
+        ids=lambda x: x.__class__.__name__,
     )
-    def test_activation_forward(self, operation, expected_output):
-        x = Tensor(np.array([-1.0, 0.0, 1.0, 2.0]))
+    def test_activation_forward(self, operation, data, expected_func):
+        output = operation(data)
 
-        output = operation(x)
-
-        assert_data(output, expected_output)
-
+        assert_data(output, expected_func(data))
 
     @pytest.mark.parametrize(
         "operation, expected_grad_input",
@@ -33,15 +39,17 @@ class TestActivation:
             (Sigmoid(), np.array([0.19661193, 0.25, 0.19661193, 0.10499359])),
             (Tanh(), np.array([0.41997434, 1.0, 0.41997434, 0.07065082])),
         ],
+        ids=lambda x: x.__class__.__name__,
     )
-    def test_activation_backward(self, operation, expected_grad_input):
-        x = Tensor(np.array([-1.0, 0.0, 1.0, 2.0]), requires_grad=True)
-
-        output = operation(x)
+    def test_activation_backward(self, operation, data, expected_grad_input):
+        data.requires_grad = True
+        output = operation(data)
 
         output.backward()
 
-        assert_grad(x, expected_grad_input)
+        assert_grad(data, expected_grad_input)
+
+        data.clear_grad()
 
     @pytest.mark.parametrize("alpha", [-0.01, 0, -1.0])
     def test_leaky_relu_invalid_alpha(self, alpha):
@@ -80,12 +88,7 @@ class TestActivationUtils:
     def test_activation_from_name(self, name, class_type):
         assert activation_from_name(name) == class_type
 
-    @pytest.mark.parametrize("invalid_name", [
-        "activation_test",
-        "relu",
-        "",
-        "Unknown"
-    ])
+    @pytest.mark.parametrize("invalid_name", ["activation_test", "relu", "", "Unknown"])
     def test_activation_from_name_error(self, invalid_name):
         with pytest.raises(ValueError):
             activation_from_name(invalid_name)

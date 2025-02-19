@@ -21,13 +21,17 @@ class Dense(Trainable):
     _in_features: int
     _out_features: int
 
-    required_fields: ClassVar[tuple[str]] = (c.WEIGHT_PREFIX, c.BIAS_PREFIX, c.ACTIVATION_PREFIX)
+    required_fields: ClassVar[tuple[str]] = (
+        c.WEIGHT_PREFIX,
+        c.BIAS_PREFIX,
+        c.ACTIVATION_PREFIX,
+    )
 
     def __init__(
         self,
         features: int | tuple[int, int],
         activation_function: ActivationFunction | None = None,
-        weights_initializer: Initializer | None = None,
+        initializer: Initializer | None = None,
         *,
         rng: Generator | None = None,
     ):
@@ -38,7 +42,7 @@ class Dense(Trainable):
                 If int, the number of nodes in the layer, the in features are inferred from the first call to forward.
                 If tuple, the number of (in features, out features)
             activation_function (ActivationFunction | None): The activation function to be used by this layer.
-            weights_initializer (Initializer | None): The initializer for the weights of this layer. If None, the weights are not initialized.
+            initializer (Initializer | None): The initializer for the weights of this layer. If None, the weights are not initialized.
             rng (Generator | None): A random number generator instance for initializing weights.
         Raises:
             ValueError: If any features is incorrect.
@@ -53,7 +57,7 @@ class Dense(Trainable):
 
             self._out_features = features
             self._in_features = -1
-            self._initializer = weights_initializer
+            self._initializer = initializer
         elif isinstance(features, tuple):
             if len(features) != 2:
                 raise ValueError(
@@ -66,7 +70,7 @@ class Dense(Trainable):
                     )
 
             self._in_features, self._out_features = features
-            self._initializer = weights_initializer
+            self._initializer = initializer
 
             if self._initializer:
                 self._initialize_weights(rng=rng)
@@ -104,10 +108,16 @@ class Dense(Trainable):
 
         return forward_output
 
-    def _initialize_weights(self, *, requires_grad: bool = False, rng: Generator | None = None) -> None:
+    def _initialize_weights(
+        self, *, requires_grad: bool = False, rng: Generator | None = None
+    ) -> None:
         """Initializes the weights of the layer."""
-        assert self._in_features is not None, "Input features cannot be None when initializing weights."
-        assert self._initializer is not None, "Initializer cannot be None when initializing weights."
+        assert self._in_features is not None, (
+            "Input features cannot be None when initializing weights."
+        )
+        assert self._initializer is not None, (
+            "Initializer cannot be None when initializing weights."
+        )
 
         self.weights = self._initializer.initialize(
             (self._in_features, self._out_features),
@@ -134,7 +144,8 @@ class Dense(Trainable):
         layer._in_features = in_features
         layer.weights = Tensor(weights)
         layer.biases = Tensor(data[c.BIAS_PREFIX])
-        layer.activation_function = activation_from_name(data[c.ACTIVATION_PREFIX].item())()
+        layer.activation_function = activation_from_name(
+            data[c.ACTIVATION_PREFIX].item()
+        )()
 
         return layer
-
