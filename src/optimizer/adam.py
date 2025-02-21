@@ -64,12 +64,15 @@ class Adam(Optimizer):
             v: v of those params
         """
         if not m or not v:
-            m[:] = [op.zeros_like(g, dtype=float, requires_grad=False) for g in gradients]
-            v[:] = [op.zeros_like(g, dtype=float, requires_grad=False) for g in gradients]
+            m[:] = [op.zeros_like(g, requires_grad=False) for g in gradients]
+            v[:] = [op.zeros_like(g, requires_grad=False) for g in gradients]
 
-        m[:] = [self.b1 * m[i] + (1 - self.b1) * g for i, g in enumerate(gradients)]
-
-        v[:] = [self.b2 * v[i] + (1 - self.b2) * g**2 for i, g in enumerate(gradients)]
+        for m_i, v_i, g in zip(m, v, gradients):
+            m_i *= self.b1
+            m_i += (1 - self.b1) * g
+            
+            v_i *= self.b2
+            v_i += (1 - self.b2) * g**2
 
         lr *= np.sqrt(1 - self.b2**t) / (1 - self.b1**t)
 

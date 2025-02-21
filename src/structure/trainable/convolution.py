@@ -213,7 +213,7 @@ class Convolution(Trainable):
         out_channels, in_channels, kernel_height, kernel_width = weights.shape
 
         layer = Convolution(
-            out_channels, kernel_height, kernel_width, stride=data["stride"], padding=data["padding"]
+            (in_channels, out_channels), (kernel_height, kernel_width), stride=data["stride"], padding=data["padding"]
         )
 
         layer._in_channels = in_channels
