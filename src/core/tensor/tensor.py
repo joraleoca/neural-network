@@ -8,6 +8,7 @@ import numpy as np
 from numpy.typing import NDArray, ArrayLike, DTypeLike
 
 from ..config import Config
+from .device import Device
 from .autograd import (
     Function,
     operations as op,
@@ -15,20 +16,13 @@ from .autograd import (
 )
 
 
-T = TypeVar('T', bound=cp.generic)
-
-
-class _Device:
-    """Class with constants representing the available devices for tensor creation."""
-    CPU = "cpu"
-    CUDA = "cuda"
-    AUTO = "auto"
+T = TypeVar("T", bound=cp.generic)
 
 
 class Tensor(MutableSequence[T]):
     """A class representing a multidimensional array (tensor) with support for automatic differentiation."""
 
-    __slots__ = "data", "grad", "_requires_grad", "_grad_operation"
+    __slots__ = "data", "grad", "_requires_grad", "_grad_operation", "_device"
 
     data: NDArray[T]
     grad: NDArray[cp.floating] | None
@@ -37,8 +31,15 @@ class Tensor(MutableSequence[T]):
 
     _grad_operation: Function | None
 
+    _device: Device
+
     def __init__(
-        self, data: ArrayLike, *, dtype: DTypeLike = None, requires_grad: bool = False, device: str | None = None
+        self,
+        data: ArrayLike,
+        *,
+        dtype: DTypeLike = None,
+        requires_grad: bool = False,
+        device: str | Device | None = None,
     ):
         """
         Initialize a Tensor object.
@@ -50,7 +51,7 @@ class Tensor(MutableSequence[T]):
                 The desired data type for the tensor. If not provided, the data type will be inferred.
             requires_grad (bool, optional):
                 If True, the tensor will track gradients for automatic differentiation. Default is False.
-            device (str | _Device): The device on which to create the tensor. 
+            device (str | Device): The device on which to create the tensor.
                 Options:
                     - "cpu"    : Create the tensor on the CPU.
                     - "cuda"   : Create the tensor on the GPU (raises an error if not available).
@@ -59,16 +60,16 @@ class Tensor(MutableSequence[T]):
         if device is None:
             device = Config.default_device
 
-        if device == _Device.CUDA and not cp.cuda.is_available():
+        if device == Device.CUDA and not cp.cuda.is_available():
             raise ValueError("Cannot create tensor on 'cuda', GPU is not available.")
 
         match device:
-            case _Device.CPU:
+            case Device.CPU:
                 if isinstance(data, np.ndarray):
                     self.data = data if dtype is None else data.astype(dtype)
                 else:
                     self.data = np.array(data, dtype=dtype)
-            case _Device.CUDA | _Device.AUTO: 
+            case Device.CUDA:
                 if isinstance(data, cp.ndarray):
                     self.data = data if dtype is None else data.astype(dtype)
                 else:
@@ -79,6 +80,7 @@ class Tensor(MutableSequence[T]):
         self._requires_grad = requires_grad
         self._grad_operation = None
         self.grad = None
+        self._device = Device(device)
 
     """Magic methods"""
 
@@ -90,7 +92,9 @@ class Tensor(MutableSequence[T]):
 
     def __setitem__(self, idx, value) -> None:
         if self.requires_grad:
-            raise ValueError("Tensor can only be modified in-place when it doesn't require grad")
+            raise ValueError(
+                "Tensor can only be modified in-place when it doesn't require grad"
+            )
 
         self.data[idx] = value
 
@@ -101,9 +105,9 @@ class Tensor(MutableSequence[T]):
         raise NotImplementedError("Insertion not supported for Tensor")
 
     def __array__(self, dtype: DTypeLike = None) -> NDArray[T]:
-        if self.device == _Device.CPU:
+        if self.device == Device.CPU:
             return self.data.astype(dtype)
-        
+
         return cp.ndarray.get(self.data)
 
     def __neg__(self) -> "Tensor[T]":
@@ -144,7 +148,7 @@ class Tensor(MutableSequence[T]):
 
     def __rmul__(self, other: ArrayLike):
         return self.__mul__(other)
-    
+
     def __imul__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
@@ -233,7 +237,7 @@ class Tensor(MutableSequence[T]):
         return f"Tensor({self.data}, dtype={self.dtype}, requires_grad={self.requires_grad})"
 
     def __iter__(self):
-        #TODO: Make the iter return Tensors
+        # TODO: Make the iter return Tensors
         return iter(self.data)
 
     def __contains__(self, value: T) -> bool:
@@ -249,7 +253,9 @@ class Tensor(MutableSequence[T]):
 
     def __copy__(self):
         """Return a shallow copy of this tensor."""
-        return Tensor(self.data.copy(), dtype=self.dtype, requires_grad=self.requires_grad)
+        return Tensor(
+            self.data.copy(), dtype=self.dtype, requires_grad=self.requires_grad
+        )
 
     def copy(self) -> "Tensor[T]":
         """Return a shallow copy of this tensor."""
@@ -302,19 +308,8 @@ class Tensor(MutableSequence[T]):
     def device(self) -> str:
         """
         Returns the device on which the data is stored.
-        Returns:
-            str: One of "cuda", "cpu", or raises an exception if the device is unknown.
-        
-        Raises:
-            RuntimeError: If the data is neither a CuPy nor a NumPy array, indicating an unknown device.
         """
-        if isinstance(self.data, cp.ndarray):
-            return _Device.CUDA
-        elif isinstance(self.data, np.ndarray):
-            return _Device.CPU
-        
-        raise RuntimeError(f"Unknown device for data of type {type(self.data)}")
-
+        return self._device.value
 
     """Utils"""
 
@@ -501,11 +496,7 @@ class Tensor(MutableSequence[T]):
         """
         Clears the gradient stored in the tensor.
         """
-        if (
-            self._requires_grad
-            and self.grad is not None
-            and self.grad.size != 1
-        ):
+        if self._requires_grad and self.grad is not None and self.grad.size != 1:
             self.grad.fill(0)
         else:
             self.grad = None

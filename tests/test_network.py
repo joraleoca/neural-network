@@ -178,8 +178,8 @@ class TestDense:
     def test_feedforward_config_with_layer_initializer(self):
         config = FeedForwardConfig(
             network_structure=[
-                Dense(features=10, weights_initializer=HeUniform()),
-                Dense(features=20, weights_initializer=XavierNormal()),
+                Dense(features=10, initializer=HeUniform()),
+                Dense(features=20, initializer=XavierNormal()),
                 Dense(features=30),
             ],
             classes=("class1", "class2"),
@@ -219,9 +219,9 @@ class TestConvultion:
 
     def test_feedforward_config_with_list_of_layers(self):
         layers = [
-            Convolution(channels=10, kernel_size=(3, 3)),
-            Convolution(channels=20, kernel_size=(3, 3)),
-            Convolution(channels=30, kernel_size=(3, 3)),
+            Convolution(channels=10, kernel_shape=(3, 3)),
+            Convolution(channels=20, kernel_shape=(3, 3)),
+            Convolution(channels=30, kernel_shape=(3, 3)),
         ]
         config = FeedForwardConfig(
             network_structure=layers,
@@ -238,9 +238,9 @@ class TestConvultion:
     def test_feedforward_config_with_list_of_tuples(self):
         config = FeedForwardConfig(
             network_structure=[
-                Convolution((10, 20), kernel_size=(3, 3)),
-                Convolution((20, 30), kernel_size=(3, 3)),
-                Convolution((30, 40), kernel_size=(3, 3)),
+                Convolution((10, 20), kernel_shape=(3, 3)),
+                Convolution((20, 30), kernel_shape=(3, 3)),
+                Convolution((30, 40), kernel_shape=(3, 3)),
             ],
             classes=("class1", "class2"),
             hidden_activation=Sigmoid(),
@@ -265,10 +265,10 @@ class TestConvultion:
 
     def test_feedforward_config_with_list_of_layers_and_activations(self):
         layers = [
-            Convolution(10, kernel_size=(3, 3), activation_function=Relu()),
-            Convolution(20, kernel_size=(3, 3), activation_function=None),
-            Convolution(20, kernel_size=(3, 3), activation_function=Softmax()),
-            Convolution(30, kernel_size=(3, 3), activation_function=None),
+            Convolution(10, kernel_shape=(3, 3), activation_function=Relu()),
+            Convolution(20, kernel_shape=(3, 3), activation_function=None),
+            Convolution(20, kernel_shape=(3, 3), activation_function=Softmax()),
+            Convolution(30, kernel_shape=(3, 3), activation_function=None),
         ]
         config = FeedForwardConfig(
             network_structure=layers,

@@ -17,11 +17,10 @@ class BinaryCrossentropy(Loss):
         expected: Tensor[np.floating],
         predicted: Tensor[np.floating],
     ) -> Tensor[np.floating]:
-        if isinstance(expected, Tensor):
-            if expected.shape != predicted.shape:
-                raise ValueError(
-                    f"Shape mismatch: expected {expected.shape}, got {predicted.shape}"
-                )
+        if isinstance(expected, Tensor) and expected.shape != predicted.shape:
+            raise ValueError(
+                f"Shape mismatch: expected {expected.shape}, got {predicted.shape}"
+            )
 
         predicted.data = np.clip(predicted.data, c.EPSILON, 1 - c.EPSILON)
 
