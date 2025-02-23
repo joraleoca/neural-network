@@ -38,7 +38,7 @@ class TestTensorCreation:
                 cuda = False
 
             if not cuda:
-                pytest.skip("Cuda is not available in the system")
+                pytest.skip("Cuda is not available in the system. Make sure to run the test on a system with CUDA support.")
 
         data = [1, 2, 3]
         tensor = Tensor(data, dtype=np.float32, device=device)

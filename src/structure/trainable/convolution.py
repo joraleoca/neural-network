@@ -1,6 +1,8 @@
 from typing import ClassVar, Any
 
+import cupy as cp
 import numpy as np
+from numpy.typing import NDArray
 from numpy.random import Generator
 
 from .trainable import Trainable
@@ -70,7 +72,11 @@ class Convolution(Trainable):
                 f"The kernel size must have 2 dimension. Got {len(kernel_shape)}"
             )
 
-        super().__init__()
+        super().__init__(activation_function, initializer, rng=rng)
+        self._initializer = initializer
+        self.kernel_shape = kernel_shape
+        self.stride = stride
+        self.padding = padding
 
         if isinstance(channels, tuple):
             self._in_channels, self._out_channels = channels
@@ -79,11 +85,8 @@ class Convolution(Trainable):
                 raise ValueError(
                     f"The channels must be positive. Got in: {self._in_channels}, out: {self._out_channels}"
                 )
-
-            self.weights = initializer.initialize(
-                (self._out_channels, self._in_channels) + kernel_shape,
-                rng=rng,
-            )
+        
+            self._initializate_weights()
         else:
             self._out_channels = channels
 
@@ -91,13 +94,6 @@ class Convolution(Trainable):
             raise ValueError(
                 f"The out channels must be positive. Got {self._out_channels}"
             )
-
-        self.activation_function = activation_function
-        self.initializer = initializer
-        self.stride = stride
-        self.padding = padding
-        self.kernel_shape = kernel_shape
-        self.rng = rng
 
     def forward(
         self,
@@ -129,23 +125,13 @@ class Convolution(Trainable):
 
         if not hasattr(self, "weights"):
             self._in_channels = data.shape[1]
-
-            self.weights = self.initializer.initialize(
-                (self._out_channels, self._in_channels) + self.kernel_shape,
-                requires_grad=self.requires_grad,
-                rng=self.rng,
-            )
-
-        output_height, output_width = self._output_dimensions(data.shape[-2:])
+            self._initializate_weights() 
 
         if not hasattr(self, "biases"):
             self.biases = op.zeros(
                 (self._out_channels, 1, 1),
                 requires_grad=self.requires_grad,
             )
-
-        kernel_height, kernel_width = self.weights.shape[-2:]
-        batch_size = data.shape[0]
 
         pad_width = (
             (0, 0),
@@ -155,44 +141,56 @@ class Convolution(Trainable):
         )
         data = op.pad(data, pad_width, value=data.dtype.type(0))
 
-        windows = op.compose(
-            [
-                data[
-                    :,
-                    :,
-                    i : i + kernel_height,
-                    j : j + kernel_width,
-                ]
-                for i in range(0, output_height * self.stride, self.stride)
-                for j in range(0, output_width * self.stride, self.stride)
-            ]
-        )
 
-        windows = windows.reshape(
-            (
-                batch_size,
-                output_height,
-                output_width,
-                self._in_channels,
-                kernel_height,
-                kernel_width,
-            )
-        )
+        windows = self._windows(data)
 
-        out = [
-            op.sum(self.weights[out_channel] * windows, axis=(-1, -2, -3))
-            + self.biases[out_channel]
-            for out_channel in range(self._out_channels)
-        ]
+        out = op.sum(self.weights * windows, axis=(-1, -2, -3)) + self.biases
 
-        out = op.compose(out)
-
-        out = op.transpose(out, axes=(1, 0, 2, 3))
+        if out.ndim == 3:
+            out = op.expand_dims(out, 0)
 
         if self.activation_function:
             out = self.activation_function(out)
 
         return out
+
+    def _windows(self, data: Tensor) -> NDArray:
+        batch_size, in_channels, in_height, in_width = data.shape
+        kernel_height, kernel_width = self.kernel_shape
+
+        out_height, out_width = self._output_dimensions((in_height, in_width))
+
+        shape = (batch_size, 1, out_height, out_width, in_channels, kernel_height, kernel_width)
+
+        strides = (
+            data.strides[0],
+            0,
+            data.strides[2] * self.stride,
+            data.strides[3] * self.stride,
+            data.strides[1],
+            data.strides[2],
+            data.strides[3],
+        )
+
+        xp = cp.get_array_module(data)
+
+        return xp.lib.stride_tricks.as_strided(data, shape=shape, strides=strides, writeable=False)
+
+    def _output_dimensions(self, input_size: tuple[int, ...]) -> tuple[int, ...]:
+        """
+        Calculate the output dimensions of the convolution operation.
+        Args:
+            input_size (tuple[int, ...]): A tuple representing the height and width of the input.
+        Returns:
+            tuple[int, ...]: A tuple representing the height and width of the output.
+        """
+        output_size = tuple(
+            ((d - self.weights.shape[-1 - i] + 2 * self.padding) // self.stride) + 1
+            for i, d in enumerate(input_size)
+        )
+
+        return output_size
+
 
     @property
     def input_dim(self) -> int:
@@ -245,3 +243,21 @@ class Convolution(Trainable):
         )()
 
         return layer
+
+    def _initializate_weights(self) -> None:
+        """Initializes the weights of the layer."""
+        assert self.requires_grad is not None, (
+            "Requires grad cannot be None when initializing weights."
+        )
+
+        assert self._initializer is not None, (
+            "Initializer cannot be None when initializing weights."
+        )
+
+        self.weights = self._initializer.initialize(
+            (self._out_channels, 1, 1, self._in_channels) + self.kernel_shape,
+            requires_grad=self.requires_grad,
+            rng=self.rng,
+        )
+
+        self._initializer = None

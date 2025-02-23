@@ -31,8 +31,18 @@ class Trainable(Layer, ABC):
     # Store only to use the first time forward is called, after that deleted
     _initializer: Initializer | None
 
-    def __init__(self, requires_grad: bool = False) -> None:
+    def __init__(
+        self,
+        activation_function: ActivationFunction | None, 
+        initializer: Initializer | None = None,
+        *,
+        requires_grad: bool = False,
+        rng: Any = None
+    ) -> None:
+        self.activation_function = activation_function
+        self._initializer = initializer
         self._requires_grad = requires_grad
+        self.rng = rng
 
     @property
     def requires_grad(self) -> bool:
@@ -58,15 +68,13 @@ class Trainable(Layer, ABC):
     def biases_grad(self) -> Tensor[np.floating]:
         """Returns the accumulated gradients of the biases."""
         return self.biases.grad
-
+    
     @property
     def initializer(self) -> Initializer | None:
-        """Returns the initializer of the layer."""
         return self._initializer
-
+    
     @initializer.setter
     def initializer(self, initializer: Initializer) -> None:
-        """Sets the initializer of the layer."""
         self._initializer = initializer
 
     def clear_params_grad(self) -> None:

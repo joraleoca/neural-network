@@ -47,7 +47,7 @@ class Dense(Trainable):
         Raises:
             ValueError: If any features is incorrect.
         """
-        super().__init__()
+        super().__init__(activation_function, initializer, rng=rng)
 
         if isinstance(features, int):
             if features <= 0:
@@ -57,7 +57,6 @@ class Dense(Trainable):
 
             self._out_features = features
             self._in_features = -1
-            self._initializer = initializer
         elif isinstance(features, tuple):
             if len(features) != 2:
                 raise ValueError(
@@ -70,15 +69,12 @@ class Dense(Trainable):
                     )
 
             self._in_features, self._out_features = features
-            self._initializer = initializer
 
             if self._initializer:
-                self._initialize_weights(rng=rng)
+                self._initialize_weights()
 
-        self.activation_function = activation_function
         self.biases = op.zeros((1, self._out_features))
         self._requires_grad = False
-        self.rng = rng
 
     @property
     def input_dim(self) -> int:
@@ -94,7 +90,7 @@ class Dense(Trainable):
         if self._in_features == -1:
             self._in_features = data.shape[-1]
         if not hasattr(self, "weights"):
-            self._initialize_weights(requires_grad=self.requires_grad, rng=self.rng)
+            self._initialize_weights()
 
         if data.shape[-1] != self._in_features:
             raise ValueError(
@@ -108,10 +104,12 @@ class Dense(Trainable):
 
         return forward_output
 
-    def _initialize_weights(
-        self, *, requires_grad: bool = False, rng: Generator | None = None
-    ) -> None:
+    def _initialize_weights(self) -> None:
         """Initializes the weights of the layer."""
+        assert self.requires_grad is not None, (
+            "Requires grad cannot be None when initializing weights."
+        )
+
         assert self._in_features is not None, (
             "Input features cannot be None when initializing weights."
         )
@@ -121,8 +119,8 @@ class Dense(Trainable):
 
         self.weights = self._initializer.initialize(
             (self._in_features, self._out_features),
-            requires_grad=requires_grad,
-            rng=rng,
+            requires_grad=self.requires_grad,
+            rng=self.rng,
         )
 
         self._initializer = None

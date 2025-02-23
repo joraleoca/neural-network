@@ -15,8 +15,8 @@ class TestActivation:
     @pytest.mark.parametrize(
         "operation, expected_func",
         [
-            (LeakyRelu(alpha=0.01), lambda x: np.where(x > 0, x, 0.01 * x)),
-            (Relu(), lambda x: np.where(x > 0, x, 0)),
+            (LeakyRelu(alpha=0.01), lambda x: x * (x > 0) + x * 0.01 * (x <= 0)),
+            (Relu(), lambda x: x * (x > 0)),
             (Sigmoid(), lambda x: 1 / (1 + np.exp(-x))),
             (
                 Softmax(),

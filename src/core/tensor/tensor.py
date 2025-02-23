@@ -287,6 +287,11 @@ class Tensor(MutableSequence[T]):
     def size(self) -> int:
         """Returns the number of elements in the tensor."""
         return self.data.size
+    
+    @property
+    def strides(self) -> tuple[int, ...]:
+        """Returns the strides of the tensor."""
+        return self.data.strides
 
     @property
     def requires_grad(self) -> bool:

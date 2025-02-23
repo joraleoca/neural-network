@@ -25,4 +25,4 @@ def assert_data(arr: Tensor, data: Tensor | NDArray) -> None:
     Raises:
         AssertionError: If the tensor's data does not match the expected data.
     """
-    assert np.allclose(arr.data, data), f"'{arr}' data should be {data}"
+    assert np.allclose(arr, data), f"'{arr}' data should be {data}"

@@ -12,34 +12,34 @@ class TestConvolution:
     convolution_type: type[Convolution] = Convolution
 
     def test_constructor(self):
-        out_features = 10
+        out_channels = 10
         kernel_shape = (1, 1)
-        layer = self.convolution_type(out_features, kernel_shape)
+        layer = self.convolution_type(out_channels, kernel_shape)
 
-        assert layer.output_dim == out_features, (
-            f"Output features should be 10. Got {layer.output_dim}."
+        assert layer.output_dim == out_channels, (
+            f"Output channels should be 10. Got {layer.output_dim}."
         )
         assert layer.activation_function is None, (
             f"Activation function should be None. Got {layer.activation_function}."
         )
         assert layer.kernel_shape == kernel_shape, "Kernel"
 
-    def test_constructor_features(self):
-        features = (10, 100)
-        layer = self.convolution_type(features, (1, 1))
+    def test_constructor_channels(self):
+        channels = (10, 100)
+        layer = self.convolution_type(channels, (1, 1))
 
-        assert layer.input_dim == features[0], (
-            f"Input features should be 10. Got {layer.input_dim}."
+        assert layer.input_dim == channels[0], (
+            f"Input channels should be 10. Got {layer.input_dim}."
         )
-        assert layer.output_dim == features[1], (
-            f"Output features should be 100. Got {layer.output_dim}."
+        assert layer.output_dim == channels[1], (
+            f"Output channels should be 100. Got {layer.output_dim}."
         )
         assert layer.activation_function is None, (
             f"Activation function should be None. Got {layer.activation_function}."
         )
 
     @pytest.mark.parametrize(
-        "features",
+        "channels",
         [
             (0, 10),
             (10, 0),
@@ -55,19 +55,19 @@ class TestConvolution:
         ids=[
             "zero_in_feature",
             "zero_out_feature",
-            "zero_features",
+            "zero_channels",
             "negative_in_feature",
             "negative_out_feature",
-            "negative_features",
+            "negative_channels",
             "zero",
             "-1_negative",
             "-100_negative",
             "invalid_shape",
         ],
     )
-    def test_exception_invalid_features(self, features):
+    def test_exception_invalid_channels(self, channels):
         with pytest.raises(ValueError):
-            self.convolution_type(features, (1, 1))
+            self.convolution_type(channels, (1, 1))
 
     @pytest.mark.parametrize(
         "activation_function",
@@ -103,39 +103,39 @@ class TestConvolution:
         )
 
     def test_weights_initializated(self):
-        features = (10, 100)
+        channels = (10, 100)
         kernel_shape = (3, 3)
         layer = self.convolution_type((10, 100), (3, 3), initializer=LeCunNormal())
 
         assert hasattr(layer, "weights"), "Weights should be initialized."
-        assert layer.weights.shape == features[::-1] + kernel_shape, (
-            f"Weights shape should be {features[::-1] + kernel_shape}. Got {layer.weights.shape}."
+        assert layer.weights.shape == (channels[1], 1, 1, channels[0], *kernel_shape), (
+            f"Weights shape should be {(channels[1], 1, 1, channels[0], *kernel_shape)}. Got {layer.weights.shape}."
         )
 
     def test_induced_input_dim_and_weight_initializate(self):
-        features = 100
+        channels = 100
         kernel_shape = (3, 3)
-        layer = self.convolution_type(features, kernel_shape, initializer=LeCunNormal())
+        layer = self.convolution_type(channels, kernel_shape, initializer=LeCunNormal())
 
         data = op.zeros((3, 10, 200))
         layer.forward(data)
 
         assert layer.input_dim == 3, (
-            f"Input features should be 3. Got {layer.input_dim}."
+            f"Input channels should be 3. Got {layer.input_dim}."
         )
         assert hasattr(layer, "weights"), "Weights should be initialized."
-        assert layer.weights.shape == (features, data.shape[0]) + kernel_shape, (
-            f"Weights shape should be {(features, data.shape[0]) + kernel_shape}. Got {layer.weights.shape}."
+        assert layer.weights.shape == (channels, 1, 1, data.shape[0]) + kernel_shape, (
+            f"Weights shape should be {(channels, 1, 1, data.shape[0]) + kernel_shape}. Got {layer.weights.shape}."
         )
 
     def test_rng(self):
-        features = (10, 10)
+        channels = (10, 10)
         kernel_shape = (3, 3)
         layer1 = self.convolution_type(
-            features, kernel_shape, initializer=LeCunNormal(), rng=42
+            channels, kernel_shape, initializer=LeCunNormal(), rng=42
         )
         layer2 = self.convolution_type(
-            features, kernel_shape, initializer=LeCunNormal(), rng=42
+            channels, kernel_shape, initializer=LeCunNormal(), rng=42
         )
 
         assert layer1.rng == layer2.rng, "RNG should be the same for both layers."
@@ -144,7 +144,7 @@ class TestConvolution:
         )
 
         layer3 = self.convolution_type(
-            features, kernel_shape, initializer=LeCunNormal(), rng=43
+            channels, kernel_shape, initializer=LeCunNormal(), rng=43
         )
 
         assert layer1.rng != layer3.rng, "RNG should be different for both layers."
@@ -169,8 +169,8 @@ class TestConvolution:
         )
 
         assert hasattr(layer, "weights"), "Weights should be initialized."
-        assert layer.weights.shape == (*channels[::-1], *kernel_shape), (
-            f"Weights shape should be (8, 16, 3, 3), but got {layer.weights.shape}."
+        assert layer.weights.shape == (channels[1], 1, 1, channels[0], *kernel_shape), (
+            f"Weights shape should be (8, 1, 1, 16, 3, 3), but got {layer.weights.shape}."
         )
 
         assert hasattr(layer, "biases"), "Biases should be initialized."
@@ -222,3 +222,20 @@ class TestConvolution:
 
         with pytest.raises(ValueError):
             layer.forward(Tensor(np.random.default_rng().random((10, 9, 10, 10))))
+
+    def test_backwards(self):
+        channels = (16, 8)
+        kernel_shape = (3, 3)
+
+        layer = self.convolution_type(
+            channels, kernel_shape, initializer=LeCunNormal(), rng=0
+        )
+
+        layer.requires_grad = True
+
+        data = Tensor(np.random.default_rng().random((2, channels[0], 100, 100)))
+        output = layer.forward(data)
+
+        output.backward()
+
+        assert layer.weights_grad.shape == layer.weights.shape

@@ -19,23 +19,17 @@ def update_broadcast_grad(grad: NDArray, tensor: "t.Tensor") -> NDArray:
     if tensor.size == 1:
         return xp.atleast_1d(grad.sum())
 
-    shape = list(grad.shape)
-    tensor_shape = [0] * max(0, len(shape) - len(tensor.shape)) + list(tensor.shape)
+    grad_shape = grad.shape
+    tensor_shape = tensor.shape
+    
+    dim_diff = len(grad_shape) - len(tensor_shape)
+    if dim_diff > 0:
+        grad = grad.sum(axis=tuple(range(dim_diff)))
 
-    shapes_news = []
-    shapes_ones = []
-
-    for i, (s, r_s) in enumerate(zip(shape, tensor_shape)):
-        diff = r_s - s
-
-        if diff < 0:
-            shapes_news.append(i)
-        elif diff > 0 and tensor_shape[i] != 1:
-            shapes_ones.append(i)
-
-    grad = grad.sum(tuple(shapes_ones), keepdims=True)
-    grad = grad.sum(tuple(shapes_news))
-
+    axes_to_sum = tuple(i for i, t in enumerate(tensor_shape) if t == 1)
+    if axes_to_sum:
+        grad = grad.sum(axis=axes_to_sum, keepdims=True)
+    
     return xp.atleast_1d(grad)
 
 
