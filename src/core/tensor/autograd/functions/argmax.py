@@ -6,25 +6,25 @@ from ..function import Function
 from ... import tensor
 
 
-class Round(Function):
-    """Function that rounds the elements of a tensor to the nearest integer."""
+class Argmax(Function):
+    """Function that computes the indices of the maximum values along an axis."""
 
-    __slots__ = ["decimals"]
+    __slots__ = "axis", "keepdims"
 
-    def __init__(self, a: "tensor.Tensor", *, decimals: int = 0):
+    def __init__(self, a: "tensor.Tensor", *, axis: int | tuple[int, ...] | None = None, keepdims: bool = False):
         self.args = (a,)
-        self.decimals = decimals
+        self.axis = axis
+        self.keepdims = keepdims
 
     def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
         a = self.args[0]
 
         if inplace:
-            a.data.round(self.decimals)
-            return a
+            raise ValueError("Inplace argmax is not supported.")
 
         xp = cp.get_array_module(a.data)
         self.result = tensor.Tensor(
-            xp.round(a.data, self.decimals),
+            xp.argmax(a.data, axis=self.axis, keepdims=self.keepdims),
             requires_grad=a.requires_grad,
         )
 

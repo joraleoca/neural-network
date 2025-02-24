@@ -105,10 +105,12 @@ class Tensor(MutableSequence[T]):
         raise NotImplementedError("Insertion not supported for Tensor")
 
     def __array__(self, dtype: DTypeLike = None) -> NDArray[T]:
-        if self.device == Device.CPU:
-            return self.data.astype(dtype)
-
-        return cp.ndarray.get(self.data)
+        if isinstance(self.data, np.ndarray):
+            data = self.data
+        else:
+            data = cp.ndarray.get(self.data)
+ 
+        return data.astype(dtype)
 
     def __neg__(self) -> "Tensor[T]":
         return self.apply_operation(op.Neg(self), inplace=False)
@@ -397,6 +399,22 @@ class Tensor(MutableSequence[T]):
                 If no axis is specified, returns the mean element as a scalar.
         """
         return self.apply_operation(operation=func.Mean(self, axis=axis))
+    
+    def argmax(self, *, axis: int | tuple[int, ...] | None = None, dtype: DTypeLike, out: None = None, keepdims: bool = False) -> "Tensor[T]":
+        """
+        Returns the indices of the maximum values along an axis.
+
+        Args:
+            axis (int | tuple[int, ...] | None): The axis or axes along which to perform the operation.
+            dtype (DTypeLike): The data type of the returned tensor.
+            out (None): Not supported. Made for compatibility.
+            keepdims (bool): If True, the reduced axes are left in the result as dimensions with size one. Default is False.
+        Returns:
+            Tensor: A tensor with the indices of the maximum values along the specified axis.
+        """
+        out_ = self.apply_operation(operation=func.Argmax(self, axis=axis, keepdims=keepdims))
+        out_.dtype = dtype
+        return out_
 
     def reshape(self, shape: tuple[int, ...]) -> "Tensor[T]":
         """

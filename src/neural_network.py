@@ -1,6 +1,7 @@
 from copy import deepcopy
 from pathlib import Path
 from typing import Iterable
+from time import time # TODO: Delete this and where it is used
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -212,6 +213,7 @@ class NeuralNetwork:
         batches = self._batch_data(data_train, expected_train_encoded, config.batch_size)
 
         for epoch in range(config.epochs + 1):
+            start = time()
             losses = self._backward(batches, config)
             current_epoch_loss = np.mean(losses)
 
@@ -235,17 +237,15 @@ class NeuralNetwork:
             config.lr.update(epoch)
 
             if config.debug:
-                train_accuracy = self.evaluate(data_train, expected_train)
                 # Store metrics for plotting
                 metrics["losses"].append(current_epoch_loss)
                 metrics["test_acc"].append(val_accuracy)
-                metrics["train_acc"].append(train_accuracy)
                 print(
                     f"Epoch {epoch}, "
                     f"Accuracy: {val_accuracy:.4f}, "
                     f"Loss: {current_epoch_loss:.4f}, "
-                    f"train_acc: {train_accuracy:.4f}"
                 )
+                print(f"Time taken: {time() - start:.4f}s")
 
         self.layers = best_layers
         self._trainable_layers = best_trainable_layers
@@ -309,7 +309,6 @@ class NeuralNetwork:
             float: The accuracy of the neural network on the provided dataset, calculated as the
                proportion of correctly classified inputs.
         """
-
         correct = int(sum(
             self.encoder.decode(self.forward_pass(input_)) == label
             for input_, label in zip(data, expected)

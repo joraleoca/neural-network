@@ -1,5 +1,6 @@
 from typing import Final
 
+import cupy as cp
 import numpy as np
 
 from .encoder import Encoder
@@ -54,5 +55,4 @@ class OneHotEncoder[T](Encoder):
         Returns:
             T: The class label corresponding to the highest value in the encoded array.
         """
-
-        return self.classes[np.argmax(encoded)]
+        return self.classes[op.argmax(encoded).item()]

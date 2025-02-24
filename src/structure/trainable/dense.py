@@ -21,7 +21,7 @@ class Dense(Trainable):
     _in_features: int
     _out_features: int
 
-    required_fields: ClassVar[tuple[str]] = (
+    required_fields: ClassVar[tuple[str, ...]] = (
         c.WEIGHT_PREFIX,
         c.BIAS_PREFIX,
         c.ACTIVATION_PREFIX,

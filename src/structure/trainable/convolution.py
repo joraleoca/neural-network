@@ -1,8 +1,6 @@
 from typing import ClassVar, Any
 
-import cupy as cp
 import numpy as np
-from numpy.typing import NDArray
 from numpy.random import Generator
 
 from .trainable import Trainable
@@ -31,7 +29,7 @@ class Convolution(Trainable):
     stride: int
     padding: int
 
-    required_fields: ClassVar[tuple[str]] = (
+    required_fields: ClassVar[tuple[str, ...]] = (
         c.WEIGHT_PREFIX,
         c.BIAS_PREFIX,
         c.ACTIVATION_PREFIX,
@@ -112,7 +110,7 @@ class Convolution(Trainable):
         """
         if data.ndim != 4:
             if data.ndim == 3:
-                data = op.expand_dims(data, 0)
+                data = op.expand_dims(data, 0) #type: ignore
             else:
                 raise ValueError(
                     f"Expected 4D input (batch, channels, height, width). Got {data.shape}"
@@ -141,7 +139,6 @@ class Convolution(Trainable):
         )
         data = op.pad(data, pad_width, value=data.dtype.type(0))
 
-
         windows = self._windows(data)
 
         out = op.sum(self.weights * windows, axis=(-1, -2, -3)) + self.biases
@@ -154,7 +151,7 @@ class Convolution(Trainable):
 
         return out
 
-    def _windows(self, data: Tensor) -> NDArray:
+    def _windows(self, data: Tensor) -> Tensor:
         batch_size, in_channels, in_height, in_width = data.shape
         kernel_height, kernel_width = self.kernel_shape
 
@@ -172,25 +169,7 @@ class Convolution(Trainable):
             data.strides[3],
         )
 
-        xp = cp.get_array_module(data)
-
-        return xp.lib.stride_tricks.as_strided(data, shape=shape, strides=strides, writeable=False)
-
-    def _output_dimensions(self, input_size: tuple[int, ...]) -> tuple[int, ...]:
-        """
-        Calculate the output dimensions of the convolution operation.
-        Args:
-            input_size (tuple[int, ...]): A tuple representing the height and width of the input.
-        Returns:
-            tuple[int, ...]: A tuple representing the height and width of the output.
-        """
-        output_size = tuple(
-            ((d - self.weights.shape[-1 - i] + 2 * self.padding) // self.stride) + 1
-            for i, d in enumerate(input_size)
-        )
-
-        return output_size
-
+        return op.as_strided(data, shape=shape, strides=strides)
 
     @property
     def input_dim(self) -> int:

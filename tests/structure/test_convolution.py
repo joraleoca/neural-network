@@ -152,7 +152,7 @@ class TestConvolution:
             "Weights should be different for both layers."
         )
 
-    def test_forward(self):
+    def test_forward_generic(self):
         channels = (16, 8)
         kernel_shape = (3, 3)
 

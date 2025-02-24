@@ -60,14 +60,14 @@ class Trainable(Layer, ABC):
             self.clear_params_grad()
 
     @property
-    def weights_grad(self) -> Tensor[np.floating]:
+    def weights_grad(self) -> Tensor[np.floating] | None:
         """Returns the accumulated gradients of the weights."""
-        return self.weights.grad
+        return Tensor(self.weights.grad) if self.weights.grad is not None else None
 
     @property
-    def biases_grad(self) -> Tensor[np.floating]:
+    def biases_grad(self) -> Tensor[np.floating] | None:
         """Returns the accumulated gradients of the biases."""
-        return self.biases.grad
+        return Tensor(self.biases.grad) if self.biases.grad is not None else None
     
     @property
     def initializer(self) -> Initializer | None:

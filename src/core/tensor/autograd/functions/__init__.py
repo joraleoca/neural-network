@@ -16,6 +16,8 @@ from .round import Round
 from .pad import Pad
 from .compose import Compose
 from .cce import CategoricalCrossentropy
+from .as_strided import As_Strided
+from .argmax import Argmax
 
 __all__ = (
     "Max",
@@ -32,4 +34,6 @@ __all__ = (
     "Pad",
     "Compose",
     "CategoricalCrossentropy",
+    "As_Strided",
+    "Argmax",
 )

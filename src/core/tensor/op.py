@@ -266,3 +266,33 @@ def cce(predicted: Tensor[T], expected: Tensor[T]) -> Tensor[T]:
         Tensor: The categorical cross-entropy loss.
     """
     return predicted.apply_operation(func.CategoricalCrossentropy(predicted, expected))
+
+@ensure_input_tensor
+def as_strided(
+    input: Tensor[T] | ArrayLike | T, *, shape: tuple[int, ...], strides: tuple[int, ...]
+) -> Tensor[T]:
+    """
+    Create a strided tensor from the input.
+    Args:
+        input (Tensor | ArrayLike | T): The input data.
+        shape (tuple[int, ...]): The shape of the tensor.
+        strides (tuple[int, ...]): The strides of the tensor.
+    Returns:
+        Tensor: The strided tensor.
+    """
+    return input.apply_operation(func.As_Strided(input, shape=shape, strides=strides))
+
+@ensure_input_tensor
+def argmax(
+    input: Tensor[T] | ArrayLike | T, *, axis: int | tuple[int, ...] | None = None, keepdims: bool = False
+) -> Tensor[T]:
+    """
+    Compute the indices of the maximum values along the specified axis.
+    Args:
+        input (Tensor | ArrayLike | T): The input data.
+        axis (int | tuple[int, ...] | None): The axis along which the maximum is computed.
+        keepdims (bool): Flag to keep the dimensions of the input tensor.
+    Returns:
+        Tensor: The indices of the maximum values along the specified axis.
+    """
+    return input.apply_operation(func.Argmax(input, axis=axis, keepdims=keepdims))

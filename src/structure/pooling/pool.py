@@ -1,6 +1,9 @@
 from abc import ABC
 from typing import ClassVar, Any
 
+from numpy import generic as np_generic
+from numpy.typing import NDArray
+
 from ..layer import Layer
 from src.core import Tensor, op
 
@@ -21,7 +24,7 @@ class Pool(Layer, ABC):
     stride: int
     padding: int
 
-    required_fields: ClassVar[tuple[str]] = ("channels", "filter_size", "stride", "padding")
+    required_fields: ClassVar[tuple[str, ...]] = ("channels", "filter_size", "stride", "padding")
 
     def __init__(
         self,
@@ -63,7 +66,7 @@ class Pool(Layer, ABC):
         """Returns the number of output channels of the layer."""
         return self.channels
 
-    def _pad[T](self, data: Tensor[T], const_val: T) -> Tensor[T]:
+    def _pad[T: np_generic](self, data: Tensor[T], const_val: T) -> Tensor[T]:
         """
         Pad the input tensor with the specified padding value.
 
@@ -78,6 +81,34 @@ class Pool(Layer, ABC):
         """
         pad_width = ((0, 0), (0, 0), (self.padding, self.padding), (self.padding, self.padding))
         return op.pad(data, pad_width, value=const_val)
+    
+    def _windows(self, data: Tensor) -> NDArray:
+        """
+        Extract the sliding windows from the input tensor.
+
+        Args:
+            data (NDArray): The input tensor from which the windows are extracted.
+        
+        Returns:
+            NDArray: The sliding windows extracted from the input tensor.
+        """
+        batch_size, channels, in_height, in_width = data.shape
+        filter_height, filter_width = self.filter_size
+
+        out_height, out_width = self._output_dimensions((in_height, in_width))
+
+        shape = (batch_size, channels, out_height, out_width, filter_height, filter_width)
+
+        strides = (
+            data.strides[0],
+            data.strides[1],
+            data.strides[2] * self.stride,
+            data.strides[3] * self.stride,
+            data.strides[2],
+            data.strides[3],
+        )
+
+        return op.as_strided(data, shape=shape, strides=strides)
 
     def _output_dimensions(self, input_size: tuple[int, ...]) -> tuple[int, ...]:
         """
