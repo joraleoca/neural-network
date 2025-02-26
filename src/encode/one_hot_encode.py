@@ -40,7 +40,7 @@ class OneHotEncoder[T](Encoder):
         if label not in self._label_to_index:
             raise ValueError(f"Label is not in classes. Got {label}")
 
-        encode = op.zeros((len(self._label_to_index.keys()),), dtype=np.float64)
+        encode = op.zeros((len(self._label_to_index.keys()),))
         encode[self._label_to_index[label]] = 1
 
         return encode

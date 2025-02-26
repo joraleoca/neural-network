@@ -55,7 +55,7 @@ class Convolution(Trainable):
             channels (int | tuple[int, int]):
                 If int, the number of output channels\n
                 If tuple, the number of (in channels, out channels)
-            kernel_shape (tuple[int, int]): The size of the kernel.
+            kernel_shape (tuple[int, int]): The shape of the kernel.
             initializer (Initializer): The initializer for the weights of this layer.
             stride (int): The stride of the convolution operation.
             padding (int): The padding of the convolution operation.

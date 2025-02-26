@@ -1,8 +1,9 @@
 import cupy as cp
 import numpy as np
+from numpy.typing import DTypeLike
 import pytest
 
-from src.core import Tensor
+from src.core import Tensor, Config
 from src.core.tensor import op
 from .utils import assert_data, assert_grad
 
@@ -55,6 +56,26 @@ class TestTensorCreation:
         assert tensor.grad is None, "Gradient should be None"
         assert tensor.requires_grad, "'requires_grad' should be True"
 
+    @pytest.mark.parametrize(
+        "dtype",
+        [
+            np.float32, np.float64, np.int32, np.int64,
+            cp.float32, cp.float64, cp.int32, cp.int64,
+            float, int,
+        ],
+    )
+    @pytest.mark.parametrize("device", ["cpu", "cuda"])
+    def test_config(self, dtype: np.dtype | cp.dtype | DTypeLike, device: str) -> None:
+        """Test tensor creation with custom configuration."""
+        Config.set_default_dtype(dtype)
+        Config.set_default_device(device)
+        data = [1, 2, 3]
+        tensor = Tensor(data)
+        assert_data(tensor, np.array(data, dtype=Config.default_dtype))
+        assert tensor.device == Config.default_device, (
+            f"Tensor device {tensor.device} should be {Config.default_device}"
+        )
+        assert tensor.dtype == Config.default_dtype, f"Data type should be {Config.default_dtype}. Got {tensor.dtype}"
 
 class TestTensorOperations:
     @pytest.mark.parametrize(
@@ -235,6 +256,23 @@ class TestTensorShapeOperations:
         t1 = tensor.flatten()
 
         assert_data(t1, tensor.data.flatten())
+
+    def test_as_strides(self):
+        """Test tensor as_strides operation."""
+        data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+        tensor = Tensor(data, requires_grad=True)
+
+        result = op.as_strided(tensor, shape=(3, 2), strides=(8, 4))
+
+        assert_data(result, np.lib.stride_tricks.as_strided(data, shape=(3, 2), strides=(8, 4)))
+        assert result.shape == (3, 2), "Shape should be (3, 2)"
+        assert result.strides == (8, 4), "Strides should be (8, 4)"
+
+        a = result[1, 0] * 2
+        
+        a.backward()
+
+        assert_grad(tensor, np.array([[0, 0, 2], [0, 0, 0]], dtype=np.float32))
 
 
 class TestTensorProperties:

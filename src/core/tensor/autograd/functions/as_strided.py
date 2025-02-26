@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import cupy as cp
 
 from ..function import Function
@@ -38,6 +40,6 @@ class As_Strided(Function):
             gr = xp.lib.stride_tricks.as_strided(grad, a.shape, a.strides)
 
             if a.grad is None:
-                a.grad = gr
+                a.grad = deepcopy(gr)
             else:
                 a.grad += gr

@@ -42,7 +42,7 @@ class Max(Function):
         if a.requires_grad:
             mask = a.data == a.data.max(axis=self.axis, keepdims=True)
 
-            if self.axis and not self.keepdims:
+            if self.axis is not None and not self.keepdims:
                 xp = cp.get_array_module(grad)
                 grad = xp.expand_dims(grad, self.axis)
 

@@ -13,23 +13,23 @@ class Pool(Layer, ABC):
 
     __slots__ = [
         "channels",
-        "filter_size",
+        "filter_shape",
         "stride",
         "padding",
     ]
 
     channels: int
 
-    filter_size: tuple[int, int]
+    filter_shape: tuple[int, int]
     stride: int
     padding: int
 
-    required_fields: ClassVar[tuple[str, ...]] = ("channels", "filter_size", "stride", "padding")
+    required_fields: ClassVar[tuple[str, ...]] = ("channels", "filter_shape", "stride", "padding")
 
     def __init__(
         self,
         channels: int,
-        filter_size: tuple[int, int],
+        filter_shape: tuple[int, int],
         *,
         stride: int = 1,
         padding: int = 0,
@@ -38,7 +38,7 @@ class Pool(Layer, ABC):
         Initializes a new layer in the neural network.
         Args:
             channels (int): The number of channels in the input and output.
-            filter_size (tuple[int, int]): The size of the filter.
+            filter_shape (tuple[int, int]): The shape of the filter.
             stride (int): The stride of the sliding window.
             padding (int): The padding of the sliding window.
         Raises:
@@ -52,7 +52,7 @@ class Pool(Layer, ABC):
             raise ValueError(f"The padding value must be non-negative. Got {padding}")
 
         self.channels = channels
-        self.filter_size = filter_size
+        self.filter_shape = filter_shape
         self.stride = stride
         self.padding = padding
 
@@ -93,7 +93,7 @@ class Pool(Layer, ABC):
             NDArray: The sliding windows extracted from the input tensor.
         """
         batch_size, channels, in_height, in_width = data.shape
-        filter_height, filter_width = self.filter_size
+        filter_height, filter_width = self.filter_shape
 
         out_height, out_width = self._output_dimensions((in_height, in_width))
 
@@ -119,7 +119,7 @@ class Pool(Layer, ABC):
             tuple[int, ...]: A tuple representing the height and width of the output.
         """
         output_size: tuple[int, ...] = tuple(
-            ((d - self.filter_size[-1 - i] + 2 * self.padding) // self.stride) + 1
+            ((d - self.filter_shape[-1 - i] + 2 * self.padding) // self.stride) + 1
             for i, d in enumerate(input_size)
         )
 
@@ -128,7 +128,7 @@ class Pool(Layer, ABC):
     def data_to_store(self) -> dict[str, Any]:
         return {
             "channels": self.channels,
-            "filter_size": self.filter_size,
+            "filter_shape": self.filter_shape,
             "stride": self.stride,
             "padding": self.padding,
         }

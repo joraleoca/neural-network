@@ -1,5 +1,3 @@
-import numpy as np
-
 from .activation import ActivationFunction
 from src.core import Tensor
 from ..core.tensor import op
@@ -14,7 +12,7 @@ class Softmax(ActivationFunction):
     """
 
     def __call__[T](self, arr: Tensor[T]) -> Tensor[T]:
-        exp_shifted = op.exp(arr - np.max(arr.data))
+        exp_shifted = op.exp(arr - op.max(arr))
         softmax = exp_shifted / op.sum(exp_shifted)
 
         return softmax

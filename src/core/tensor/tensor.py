@@ -68,12 +68,12 @@ class Tensor(MutableSequence[T]):
                 if isinstance(data, np.ndarray):
                     self.data = data if dtype is None else data.astype(dtype)
                 else:
-                    self.data = np.array(data, dtype=dtype)
+                    self.data = np.array(data, dtype=dtype or Config.default_dtype)
             case Device.CUDA:
                 if isinstance(data, cp.ndarray):
                     self.data = data if dtype is None else data.astype(dtype)
                 else:
-                    self.data = cp.array(data, dtype=dtype)
+                    self.data = cp.array(data, dtype=dtype or Config.default_dtype)
             case _:
                 raise ValueError(f"Unknown device {device}")
 
@@ -478,7 +478,7 @@ class Tensor(MutableSequence[T]):
 
         if self.grad is None:
             xp = cp.get_array_module(self.data)
-            self.grad = xp.ones_like(self.data, dtype=xp.floating)
+            self.grad = xp.ones_like(self.data)
 
         graph = self._grad_graph()
 

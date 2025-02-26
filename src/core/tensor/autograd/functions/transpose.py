@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import cupy as cp
 
 from ..function import Function
@@ -44,6 +46,6 @@ class Transpose(Function):
             grad = xp.transpose(grad, grad_axes)
 
             if a.grad is None:
-                a.grad = grad
+                a.grad = deepcopy(grad)
             else:
                 a.grad += grad.T

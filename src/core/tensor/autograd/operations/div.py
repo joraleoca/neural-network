@@ -1,5 +1,6 @@
 from ..function import Function
 from ... import tensor
+from src.constants import EPSILON
 from src.core.tensor.autograd.utils import update_tensor_grad
 
 
@@ -13,11 +14,11 @@ class Div(Function):
         a, b = self.args
 
         if inplace:
-            a.data[:] /= b.data
+            a.data[:] /= b.data + EPSILON
             return a
 
         self.result = tensor.Tensor(
-            a.data / b.data,
+            a.data / (b.data + EPSILON),
             requires_grad=a.requires_grad or b.requires_grad,
         )
 
@@ -28,11 +29,11 @@ class Div(Function):
         grad = self.result.grad
 
         if a.requires_grad:
-            gr = grad * (1 / b.data)
+            gr = grad / (b.data + EPSILON)
 
             update_tensor_grad(a, gr)
 
         if b.requires_grad:
-            gr = grad * -a.data / (b.data**2)
+            gr = grad * -a.data / ((b.data**2) + EPSILON)
 
             update_tensor_grad(b, gr)
