@@ -21,21 +21,19 @@ class CategoricalCrossentropy(Function):
         xp = cp.get_array_module(*self.args)
 
         predicted.data = predicted.data.clip(EPSILON, 1 - EPSILON)
+        expected.data = expected.data.clip(EPSILON, 1 - EPSILON)
+
+        data = -xp.sum(expected.data * xp.log(predicted.data), axis=-1)
 
         if inplace:
-            predicted.data = -xp.sum(expected.data * xp.log(predicted), axis=0)
+            predicted.data = data
             return predicted
 
-        self.result = tensor.Tensor(
-            -xp.sum(expected.data * xp.log(predicted.data), axis=0),
-            requires_grad=predicted.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(data)
 
     def backward(self) -> None:
         predicted, expected = self.args
-        grad = self.result.grad
+        grad = self.result.grad.reshape(-1, 1)
 
         if predicted.requires_grad:
             gr = (

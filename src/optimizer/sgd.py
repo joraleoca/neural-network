@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from src.core import Tensor
-from src.structure import Trainable
 from .optimizer import Optimizer
 
 

@@ -95,7 +95,8 @@ class Pool(Layer, ABC):
         batch_size, channels, in_height, in_width = data.shape
         filter_height, filter_width = self.filter_shape
 
-        out_height, out_width = self._output_dimensions((in_height, in_width))
+        out_height = 1 + ((in_height - filter_height) // self.stride)
+        out_width = 1 + ((in_width - filter_width) // self.stride)
 
         shape = (batch_size, channels, out_height, out_width, filter_height, filter_width)
 

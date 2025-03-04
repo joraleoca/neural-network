@@ -1,12 +1,10 @@
-from dataclasses import dataclass
-
-from src.structure import Layer, Trainable, Dense
+from src.structure import Layer, Trainable
 from src.activation import ActivationFunction
 from src.initialization import Initializer, HeUniform
 from src.encode import Encoder
 from src.loader import Loader
 
-@dataclass(slots=True)
+
 class FeedForwardConfig:
     """
     Represents the configuration for a feed-forward neural network.\n
@@ -14,9 +12,7 @@ class FeedForwardConfig:
     The encoder can be inferred from the loss function in the training configuration.\n
 
     Attributes:
-        network_structure (list[Layer] | list[int] | None):
-            A list of layers that compose the neural network.\n
-            If a list of integers is provided, the layers will be created as DenseLayer\n
+        network_structure (list[Layer]): A list of layers that compose the neural network.
         classes (tuple): A tuple containing the class labels for the output layer.
         initializer (Initializer | Loader): The initializer for the network parameters.
         hidden_activation (ActivationFunction | None): The activation function for the hidden layers.
@@ -25,7 +21,7 @@ class FeedForwardConfig:
         random_seed (int | None): The random seed for reproducibility.
     """
 
-    network_structure: list[Layer] | list[int] | None
+    network_structure: list[Layer]
 
     classes: tuple
 
@@ -38,34 +34,49 @@ class FeedForwardConfig:
 
     random_seed: int | None = None
 
-    def __post_init__(self):
-        """Validate initialization parameters and set layers parameters."""
+    def __init__(
+        self,
+        network_structure: list[Layer] | None,
+        classes: tuple,
+        initializer: Initializer | Loader = HeUniform(),
+        hidden_activation: ActivationFunction | None = None,
+        output_activation: ActivationFunction | None = None,
+        encoder: type[Encoder] | None = None,
+        random_seed: int | None = None,
+    ) -> None:
+        self.classes = classes
+        self.initializer = initializer
+        self.hidden_activation = hidden_activation
+        self.output_activation = output_activation
+        self.encoder = encoder
+        self.random_seed = random_seed
 
-        if self.network_structure:
-            self._prepare_network_structure()
+        if network_structure:
+            self._prepare_network_structure(network_structure)
 
         if isinstance(self.initializer, Loader):
             self.network_structure = self.initializer.load()
 
         assert self.network_structure is not None, "No network structure or loader provided"
 
-    def _prepare_network_structure(self):
+
+    def _prepare_network_structure(self, structure: list[Layer]) -> None:
         """Prepare the network structure by setting the activation functions and initializers."""
-        if not isinstance(self.network_structure, list):
-            raise TypeError("network_structure must be a list.")
+
+        assert self.initializer is not None, "Initializer must be provided."
+
+        if not isinstance(structure, list):
+            raise TypeError("structure must be a list.")
 
         if not isinstance(self.initializer, Initializer):
             raise TypeError("initializer must be an Initializer.")
 
-        if isinstance(self.network_structure[0], int):
-            self.network_structure = [Dense(n) for n in self.network_structure]
-
-        for layer in self.network_structure:
+        for layer in structure:
             if not isinstance(layer, Trainable):
                 continue
 
             if layer.activation_function is None:
-                if layer is self.network_structure[-1]:
+                if layer is structure[-1]:
                     layer.activation_function = self.output_activation
                 else:
                     layer.activation_function = self.hidden_activation
@@ -75,3 +86,5 @@ class FeedForwardConfig:
 
             if layer.rng is None:
                 layer.rng = self.random_seed
+
+        self.network_structure = structure

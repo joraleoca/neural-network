@@ -3,8 +3,10 @@ from typing import Sequence, SupportsIndex
 import numpy as np
 from numpy.typing import DTypeLike, ArrayLike
 
+from ..config import Config
 from .tensor import Tensor, T
 from .autograd import functions as func
+from .autograd import operations as ops
 from .utils import ensure_input_tensor
 
 
@@ -20,7 +22,7 @@ def empty(
     Returns:
         Tensor: A tensor of given shape.
     """
-    return Tensor(np.empty(shape), dtype=dtype, requires_grad=requires_grad)
+    return Tensor(np.empty(shape), dtype=dtype or Config.default_dtype, requires_grad=requires_grad)
 
 
 def zeros_like(
@@ -36,7 +38,7 @@ def zeros_like(
         Tensor: A tensor filled with zeros with the same shape and dtype as the input tensor.
     """
     return Tensor(
-        np.zeros_like(arr.data, dtype=dtype or arr.dtype),
+        np.zeros_like(arr.data),
         dtype=dtype or arr.dtype,
         requires_grad=requires_grad,
     )
@@ -58,8 +60,8 @@ def zeros(
         Tensor: A tensor filled with zeros.
     """
     return Tensor(
-        np.zeros(shape, dtype=dtype),
-        dtype=dtype,
+        np.zeros(shape),
+        dtype=dtype or Config.default_dtype,
         requires_grad=requires_grad,
     )
 
@@ -74,11 +76,7 @@ def exp(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]
     Returns:
         Tensor: The exponential of all elements in the input tensor.
     """
-    if inplace:
-        input.data[:] = np.e**input.data
-        return input
-
-    return np.e**input
+    return input.apply_operation(ops.Pow(Tensor(np.e, dtype=Config.default_dtype), input), inplace=inplace)
 
 @ensure_input_tensor
 def sum(
@@ -168,7 +166,7 @@ def log(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]
     return input.apply_operation(func.Log(input), inplace=inplace)
 
 
-def reshape(input: Tensor[T], shape: tuple[int, ...]) -> Tensor[T]:
+def reshape(input: Tensor[T], shape: tuple[int, ...], *, inplace: bool = False) -> Tensor[T]:
     """
     Reshape the input tensor.
     Args:
@@ -177,7 +175,7 @@ def reshape(input: Tensor[T], shape: tuple[int, ...]) -> Tensor[T]:
     Returns:
         Tensor: The reshaped tensor.
     """
-    return input.apply_operation(func.Reshape(input, shape=shape))
+    return input.apply_operation(func.Reshape(input, shape=shape), inplace=inplace)
 
 
 def transpose(input: Tensor[T], *, axes: list[int] | tuple[int, ...] | int | None = None) -> Tensor[T]:
@@ -284,13 +282,13 @@ def as_strided(
 
 @ensure_input_tensor
 def argmax(
-    input: Tensor[T] | ArrayLike | T, *, axis: int | tuple[int, ...] | None = None, keepdims: bool = False
+    input: Tensor[T] | ArrayLike | T, *, axis: SupportsIndex | None = None, keepdims: bool = False
 ) -> Tensor[T]:
     """
     Compute the indices of the maximum values along the specified axis.
     Args:
         input (Tensor | ArrayLike | T): The input data.
-        axis (int | tuple[int, ...] | None): The axis along which the maximum is computed.
+        axis (SupportsIndex | None): The axis along which the maximum is computed.
         keepdims (bool): Flag to keep the dimensions of the input tensor.
     Returns:
         Tensor: The indices of the maximum values along the specified axis.

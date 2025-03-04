@@ -1,9 +1,7 @@
-import numpy as np
 import cupy as cp
-from cupy.typing import DTypeLike
 
 from .activation import ActivationFunction
-from src.core import Tensor, Config
+from src.core import Tensor, T
 
 
 class LeakyRelu(ActivationFunction):
@@ -18,30 +16,25 @@ class LeakyRelu(ActivationFunction):
     Args:
         alpha: Slope for negative values. Defaults to 0.01.
     """
-    __slots__ = "ALPHA", "_dtype"
+    __slots__ = "ALPHA"
 
     ALPHA: float
 
-    _dtype: DTypeLike
-
-    def __init__(self, *, alpha: float = 0.01, dtype: DTypeLike = None) -> None:
+    def __init__(self, alpha: float = 0.01) -> None:
         """
         Initialize LeakyRelu with given alpha parameter.
         Args:
             alpha: Slope for negative values. Must be positive.
+            dtype: Data type of the input tensor.
         """
         if alpha <= 0:
             raise ValueError(f"Alpha must be positive. Got {alpha}")
-        
-        self._dtype = np.dtype(dtype) if dtype is not None else Config.default_dtype
-        
+                
         self.ALPHA = alpha
 
-        if not np.issubdtype(self._dtype, np.floating):
-            raise TypeError("Alpha must be a float and dtype or default dtype is not a floating type."
-                            f"Got {self._dtype}, use ReLU instead or floats.")
-
-
-    def __call__[T](self, arr: Tensor[T]) -> Tensor[T]:
+    def __call__(self, arr: Tensor[T]) -> Tensor[T]:
         xp = cp.get_array_module(arr.data)
-        return arr * xp.where(arr > 0, xp.ones((1,), dtype=self._dtype), xp.array([self.ALPHA], dtype=self._dtype))
+        return arr * xp.where(arr > 0, 
+                              xp.ones((1,), dtype=arr.dtype),
+                              xp.array([self.ALPHA], dtype=arr.dtype)
+                            )

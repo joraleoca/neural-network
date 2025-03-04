@@ -71,7 +71,7 @@ class Tensor(MutableSequence[T]):
                     self.data = np.array(data, dtype=dtype or Config.default_dtype)
             case Device.CUDA:
                 if isinstance(data, cp.ndarray):
-                    self.data = data if dtype is None else data.astype(dtype)
+                    self.data = data if dtype is None else data.astype(dtype)   #type: ignore
                 else:
                     self.data = cp.array(data, dtype=dtype or Config.default_dtype)
             case _:
@@ -251,7 +251,7 @@ class Tensor(MutableSequence[T]):
         )
 
     def __index__(self) -> int:
-        return self.data.__index__()
+        return self.data.__index__()    #type: ignore
 
     def __copy__(self):
         """Return a shallow copy of this tensor."""
@@ -271,7 +271,7 @@ class Tensor(MutableSequence[T]):
         return self.data.dtype
 
     @dtype.setter
-    def dtype(self, dtype: cp.dtype) -> None:
+    def dtype(self, dtype: DTypeLike) -> None:
         """Sets the data type (dtype) of the tensor."""
         self.data = self.data.astype(dtype)
 
@@ -400,12 +400,12 @@ class Tensor(MutableSequence[T]):
         """
         return self.apply_operation(operation=func.Mean(self, axis=axis))
     
-    def argmax(self, *, axis: int | tuple[int, ...] | None = None, dtype: DTypeLike, out: None = None, keepdims: bool = False) -> "Tensor[T]":
+    def argmax(self, *, axis: SupportsIndex | None = None, dtype: DTypeLike, out: None = None, keepdims: bool = False) -> "Tensor[T]":
         """
         Returns the indices of the maximum values along an axis.
 
         Args:
-            axis (int | tuple[int, ...] | None): The axis or axes along which to perform the operation.
+            axis (SupportsIndex | None): The axis or axes along which to perform the operation.
             dtype (DTypeLike): The data type of the returned tensor.
             out (None): Not supported. Made for compatibility.
             keepdims (bool): If True, the reduced axes are left in the result as dimensions with size one. Default is False.
@@ -416,7 +416,7 @@ class Tensor(MutableSequence[T]):
         out_.dtype = dtype
         return out_
 
-    def reshape(self, shape: tuple[int, ...]) -> "Tensor[T]":
+    def reshape(self, shape: tuple[int, ...], *, inplace: bool = True) -> "Tensor[T]":
         """
         Returns a new tensor with the same data but a different shape.
 
@@ -425,7 +425,7 @@ class Tensor(MutableSequence[T]):
         Returns:
             Tensor: A new tensor with the specified shape.
         """
-        return self.apply_operation(operation=func.Reshape(self, shape=shape))
+        return self.apply_operation(operation=func.Reshape(self, shape=shape), inplace=inplace)
 
     def flatten(self) -> "Tensor[T]":
         """
@@ -478,7 +478,15 @@ class Tensor(MutableSequence[T]):
 
         if self.grad is None:
             xp = cp.get_array_module(self.data)
-            self.grad = xp.ones_like(self.data)
+            
+            if self.data.dtype.kind == "f":
+                dtype_ = xp.dtype(self.data.dtype)
+            elif Config.default_dtype.kind == "f":
+                dtype_ = Config.default_dtype
+            else:
+                dtype_ = np.float32
+
+            self.grad = xp.ones_like(self.data, dtype=dtype_)   #type: ignore
 
         graph = self._grad_graph()
 

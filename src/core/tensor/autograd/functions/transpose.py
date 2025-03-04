@@ -23,12 +23,7 @@ class Transpose(Function):
             return a
 
         xp = cp.get_array_module(a.data)
-        self.result = tensor.Tensor(
-            xp.transpose(a.data, axes=self.axes),
-            requires_grad=a.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(xp.transpose(a.data, axes=self.axes))
 
     def backward(self) -> None:
         a = self.args[0]

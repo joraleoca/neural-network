@@ -28,12 +28,9 @@ class Max(Function):
 
         a = self.args[0]
 
-        self.result = tensor.Tensor(
-            a.data.max(axis=self.axis, keepdims=self.keepdims),
-            requires_grad=a.requires_grad,
+        return self._create_output_tensor(
+            a.data.max(axis=self.axis, keepdims=self.keepdims)
         )
-
-        return self.result
 
     def backward(self) -> None:
         a = self.args[0]

@@ -17,18 +17,15 @@ class Round(Function):
 
     def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
         a = self.args[0]
+        xp = cp.get_array_module(a.data)
+
+        data = xp.round(a.data, self.decimals)
 
         if inplace:
-            a.data.round(self.decimals)
+            a.data = data
             return a
 
-        xp = cp.get_array_module(a.data)
-        self.result = tensor.Tensor(
-            xp.round(a.data, self.decimals),
-            requires_grad=a.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(data)
 
     def backward(self) -> None:
         a = self.args[0]

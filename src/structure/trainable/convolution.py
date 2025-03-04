@@ -6,20 +6,20 @@ from numpy.random import Generator
 from .trainable import Trainable
 from src.core import Tensor, op
 from src.activation import ActivationFunction, activation_from_name
-from src.initialization import Initializer, LeCunNormal
+from src.initialization import Initializer
 import src.constants as c
 
 
 class Convolution(Trainable):
     """Convolution layer in a neural network."""
 
-    __slots__ = [
+    __slots__ = (
         "_in_channels",
         "_out_channels",
         "kernel_shape",
         "stride",
         "padding",
-    ]
+    )
 
     _in_channels: int
     _out_channels: int
@@ -42,7 +42,7 @@ class Convolution(Trainable):
         channels: int | tuple[int, int],
         kernel_shape: tuple[int, int],
         activation_function: ActivationFunction | None = None,
-        initializer: Initializer = LeCunNormal(),
+        initializer: Initializer | None = None,
         *,
         stride: int = 1,
         padding: int = 0,
@@ -71,7 +71,6 @@ class Convolution(Trainable):
             )
 
         super().__init__(activation_function, initializer, rng=rng)
-        self._initializer = initializer
         self.kernel_shape = kernel_shape
         self.stride = stride
         self.padding = padding
@@ -83,8 +82,9 @@ class Convolution(Trainable):
                 raise ValueError(
                     f"The channels must be positive. Got in: {self._in_channels}, out: {self._out_channels}"
                 )
-        
-            self._initializate_weights()
+
+            if self._initializer is not None:
+                self._initializate_weights()
         else:
             self._out_channels = channels
 
@@ -100,9 +100,9 @@ class Convolution(Trainable):
         """
         Apply a convolution operation to the input data.
         Args:
-            data (NDArray[np.floating]): A 3D numpy array with shape (channels, height, width) representing the input data.
+            data (Tensor[np.floating]): A 3D numpy array with shape (channels, height, width) representing the input data.
         Returns:
-            NDArray[np.floating]: A 3D numpy array with shape (_out_channels, output_height, output_width) representing the convolved output.
+            Tensor[np.floating]: A 3D numpy array with shape (_out_channels, output_height, output_width) representing the convolved output.
         Raises:
             ValueError:
                 If the input data does not have 3 dimensions.
@@ -155,11 +155,20 @@ class Convolution(Trainable):
         batch_size, in_channels, in_height, in_width = data.shape
         kernel_height, kernel_width = self.kernel_shape
 
-        out_height, out_width = self._output_dimensions((in_height, in_width))
+        out_height = 1 + ((in_height - kernel_height) // self.stride)
+        out_width = 1 + ((in_width - kernel_width) // self.stride) 
 
-        shape = (batch_size, 1, out_height, out_width, in_channels, kernel_height, kernel_width)
+        window_shape = (
+            batch_size,
+            1,
+            out_height,
+            out_width,
+            in_channels,
+            kernel_height,
+            kernel_width,
+        )   
 
-        strides = (
+        window_strides = (
             data.strides[0],
             0,
             data.strides[2] * self.stride,
@@ -168,8 +177,31 @@ class Convolution(Trainable):
             data.strides[2],
             data.strides[3],
         )
+        
+        return op.as_strided(
+            data, 
+            shape=window_shape, 
+            strides=window_strides
+        )
 
-        return op.as_strided(data, shape=shape, strides=strides)
+    def _initializate_weights(self) -> None:
+        """Initializes the weights of the layer."""
+        assert self.requires_grad is not None, (
+            "Requires grad cannot be None when initializing weights."
+        )
+
+        assert self._initializer is not None, (
+            "Initializer cannot be None when initializing weights."
+        )
+
+        self.weights = self._initializer.initialize(
+            (self._out_channels, 1, 1, self._in_channels) + self.kernel_shape,
+            requires_grad=self.requires_grad,
+            rng=self.rng,
+        )
+
+        self._initializer = None
+
 
     @property
     def input_dim(self) -> int:
@@ -180,21 +212,6 @@ class Convolution(Trainable):
     def output_dim(self) -> int:
         """Returns the number of output channels of the layer."""
         return self._out_channels
-
-    def _output_dimensions(self, input_size: tuple[int, ...]) -> tuple[int, ...]:
-        """
-        Calculate the output dimensions of the convolution operation.
-        Args:
-            input_size (tuple[int, ...]): A tuple representing the height and width of the input.
-        Returns:
-            tuple[int, ...]: A tuple representing the height and width of the output.
-        """
-        output_size = tuple(
-            ((d - self.weights.shape[-1 - i] + 2 * self.padding) // self.stride) + 1
-            for i, d in enumerate(input_size)
-        )
-
-        return output_size
 
     def data_to_store(self) -> dict[str, Any]:
         return {
@@ -222,21 +239,3 @@ class Convolution(Trainable):
         )()
 
         return layer
-
-    def _initializate_weights(self) -> None:
-        """Initializes the weights of the layer."""
-        assert self.requires_grad is not None, (
-            "Requires grad cannot be None when initializing weights."
-        )
-
-        assert self._initializer is not None, (
-            "Initializer cannot be None when initializing weights."
-        )
-
-        self.weights = self._initializer.initialize(
-            (self._out_channels, 1, 1, self._in_channels) + self.kernel_shape,
-            requires_grad=self.requires_grad,
-            rng=self.rng,
-        )
-
-        self._initializer = None

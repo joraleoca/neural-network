@@ -14,16 +14,13 @@ class Log(Function):
         a = self.args[0]
         xp = cp.get_array_module(a.data)
 
+        data = xp.log(a.data)
+
         if inplace:
-            a.data[:] = xp.log(a.data)
+            a.data = data
             return a
 
-        self.result = tensor.Tensor(
-            xp.log(a.data),
-            requires_grad=a.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(data)
 
     def backward(self) -> None:
         a = self.args[0]

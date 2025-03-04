@@ -25,12 +25,7 @@ class Mean(Function):
 
         a = self.args[0]
 
-        self.result = tensor.Tensor(
-            a.data.mean(axis=self.axis),
-            requires_grad=a.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(a.data.mean(axis=self.axis))
 
     def backward(self) -> None:
         a = self.args[0]

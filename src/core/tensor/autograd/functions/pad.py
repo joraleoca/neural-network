@@ -24,14 +24,11 @@ class Pad(Function):
         a = self.args[0]
         xp = cp.get_array_module(a.data)
 
-        self.result = tensor.Tensor(
+        return self._create_output_tensor(
             xp.pad(
                 a.data, pad_width=self.pad_width, mode="constant", constant_values=self.value
-            ),
-            requires_grad=a.requires_grad,
+            )
         )
-
-        return self.result
 
     def backward(self) -> None:
         a = self.args[0]

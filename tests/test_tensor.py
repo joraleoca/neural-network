@@ -1,21 +1,22 @@
+from typing import Callable
+
 import cupy as cp
 import numpy as np
-from numpy.typing import DTypeLike
+from numpy.typing import NDArray, DTypeLike
 import pytest
 
-from src.core import Tensor, Config
-from src.core.tensor import op
+from src.core import Tensor, Config, op
 from .utils import assert_data, assert_grad
 
 
 @pytest.fixture
-def sample_2d_tensor():
+def sample_2d_tensor() -> Tensor[np.float32]:
     """Fixture for a standard 2D tensor used across multiple tests."""
     return Tensor([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
 
 
 class TestTensorCreation:
-    def test_basic_creation(self):
+    def test_basic_creation(self) -> None:
         """Test basic tensor creation with default parameters."""
         data = [1, 2, 3]
         tensor = Tensor(data, dtype=np.float32)
@@ -30,7 +31,7 @@ class TestTensorCreation:
             "cpu",
         ],
     )
-    def test_cpu_creation(self, device):
+    def test_cpu_creation(self, device: str) -> None:
         """Test tensor creation on devices."""
         if device == "cuda":
             try:
@@ -48,7 +49,7 @@ class TestTensorCreation:
             f"Tensor device {tensor.device} should be {device}"
         )
 
-    def test_creation_with_grad(self):
+    def test_creation_with_grad(self) -> None:
         """Test tensor creation with gradient tracking enabled."""
         data = [1, 2, 3]
         tensor = Tensor(data, dtype=np.float32, requires_grad=True)
@@ -69,20 +70,26 @@ class TestTensorCreation:
         """Test tensor creation with custom configuration."""
         Config.set_default_dtype(dtype)
         Config.set_default_device(device)
+        
+        assert Config.default_dtype == dtype, f"Default dtype should be {dtype}"
+        assert Config.default_device == device, f"Default device should be {device}"
+
         data = [1, 2, 3]
         tensor = Tensor(data)
         assert_data(tensor, np.array(data, dtype=Config.default_dtype))
-        assert tensor.device == Config.default_device, (
-            f"Tensor device {tensor.device} should be {Config.default_device}"
+        assert tensor.device == device, (
+            f"Tensor device should be {device}. Got {tensor.device}"
         )
-        assert tensor.dtype == Config.default_dtype, f"Data type should be {Config.default_dtype}. Got {tensor.dtype}"
+        assert tensor.dtype == dtype, f"Data type should be {dtype}. Got {tensor.dtype}"
+        Config.set_default_dtype(np.float32)
+        Config.set_default_device("cuda")
 
 class TestTensorOperations:
     @pytest.mark.parametrize(
         "input_data, expected_output",
         [([1, -2, 3], [-1, 2, -3]), ([-1, 0, 2], [1, 0, -2])],
     )
-    def test_unary_operations(self, input_data, expected_output):
+    def test_unary_operations(self, input_data: list[int], expected_output: list[int]) -> None:
         """Test unary operations like negation and absolute value."""
         tensor = Tensor(input_data, dtype=np.float32)
 
@@ -129,8 +136,10 @@ class TestTensorOperations:
             (lambda x, y: x / y, Tensor([4, 9, 16]), [2, 3, 4], Tensor([2, 3, 4])),
         ],
     )
-    def test_binary_operations(self, op_func, input1, input2, expected):
-        """Comprehensive .benchmarks/test for tensor binary operations."""
+    def test_binary_operations(
+        self, op_func: Callable, input1: list[int] | Tensor[int], input2: list[int] | Tensor[int], expected: Tensor
+    ) -> None:
+        """Tests for tensor binary operations."""
         result = op_func(input1, input2)
         assert_data(result, expected)
 
@@ -138,7 +147,7 @@ class TestTensorOperations:
         "input_data, expected",
         [([1, 2, 3], np.exp([1, 2, 3])), ([0, -1, 2], np.exp([0, -1, 2]))],
     )
-    def test_exponential_operations(self, input_data, expected):
+    def test_exponential_operations(self, input_data: list[int], expected: NDArray) -> None:
         """Test exponential and logarithmic operations."""
         tensor = Tensor(input_data, dtype=np.float32)
 
@@ -155,7 +164,7 @@ class TestTensorOperations:
             ([1000, -1000], np.tanh([1000, -1000])),
         ],
     )
-    def test_activation_functions(self, input_data, expected):
+    def test_activation_functions(self, input_data: list[int], expected: NDArray):
         """Test activation functions like tanh."""
         tensor = Tensor(input_data, dtype=np.float32)
         result = op.tanh(tensor)
@@ -174,8 +183,10 @@ class TestTensorReduction:
             (1, True, [[6], [15]]),
         ],
     )
-    def test_sum_variations(self, sample_2d_tensor, axis, keepdims, expected):
-        """Comprehensive test for sum operation with various parameters."""
+    def test_sum_variations(
+        self, sample_2d_tensor: Tensor, axis: int | None, keepdims: bool, expected: list
+    ) -> None:
+        """Test for sum operation with various parameters."""
         result = sample_2d_tensor.sum(axis=axis, keepdims=keepdims)
 
         assert_data(result, np.array(expected, dtype=np.float32))
@@ -191,8 +202,10 @@ class TestTensorReduction:
             (1, True, [[3], [6]]),
         ],
     )
-    def test_max_variations(self, sample_2d_tensor, axis, keepdims, expected):
-        """Comprehensive test for max operation with various parameters."""
+    def test_max_variations(
+        self, sample_2d_tensor: Tensor, axis: int | None, keepdims: bool, expected: list
+    ) -> None:
+        """Test for max operation with various parameters."""
         result = sample_2d_tensor.max(axis=axis, keepdims=keepdims)
 
         assert_data(result, np.array(expected, dtype=np.float32))
@@ -207,15 +220,31 @@ class TestTensorShapeOperations:
             ((1, 2, 3), [1, 2, 3, 4, 5, 6]),
         ],
     )
-    def test_reshape(self, sample_2d_tensor, target_shape, expected_data):
+    def test_reshape(
+        self, sample_2d_tensor: Tensor, target_shape: tuple[int, ...], expected_data: list
+    ) -> None:
         """Test reshape with various target shapes."""
-        result = sample_2d_tensor.reshape(target_shape)
+
+        result = op.reshape(sample_2d_tensor, target_shape)
+        
+        assert result is not sample_2d_tensor, "Result tensor should be different from input tensor"
+
         assert_data(
             result, np.array(expected_data, dtype=np.float32).reshape(target_shape)
         )
+        
         assert result.shape == target_shape, (
             f"Result shape {result.shape} should be {target_shape}, Error in reshape"
         )
+
+    def test_reshape_inplace(self, sample_2d_tensor: Tensor) -> None:
+        """Test reshape operation inplace."""
+        tensor = sample_2d_tensor.copy()
+        
+        result = tensor.reshape((3, 2))
+
+        assert tensor is result, "Result tensor should be the same as input tensor"
+        assert result.shape == (3, 2), "Shape should be (3, 2)"
 
     @pytest.mark.parametrize(
         "invalid_shape",
@@ -226,13 +255,13 @@ class TestTensorShapeOperations:
         ],
     )
     def test_reshape_error_cases(
-        self, sample_2d_tensor, invalid_shape: tuple[int, ...]
-    ):
+        self, sample_2d_tensor: Tensor, invalid_shape: tuple[int, ...]
+    ) -> None:
         """Test reshape with invalid shapes."""
         with pytest.raises(ValueError):
             sample_2d_tensor.reshape(invalid_shape)
 
-    def test_transpose(self, sample_2d_tensor):
+    def test_transpose(self, sample_2d_tensor: Tensor):
         """Test tensor transpose operation."""
         result = op.transpose(sample_2d_tensor)
         assert_data(result, np.array([[1, 4], [2, 5], [3, 6]], dtype=np.float32))
@@ -257,32 +286,90 @@ class TestTensorShapeOperations:
 
         assert_data(t1, tensor.data.flatten())
 
-    def test_as_strides(self):
+
+    @pytest.mark.parametrize(
+        "data, shape, strides, operation, grad",
+        [
+            (
+                [1, 2, 3], (3, 1), (4, 4), lambda x: x[1] * 2, [0, 2, 0]
+            ),
+            (
+                [1, 2, 3, 4, 5], (2, 2), (4, 4), lambda x: x.sum(), [1, 2, 1, 0, 0]
+            ),
+            (
+                [1, 2, 3, 4], (2, 2), (8, 4), lambda x: (x * x).sum(), [2, 4, 6, 8]
+            ),
+            (
+                [7], (3, 1), (0, 0), lambda x: x.sum(), [3]
+            ),
+            (
+                [[1, 2], [3, 4]], (2, 2, 1), (8, 4, 4), 
+                lambda x: x[0, 1, 0] * 2, [[0, 2], [0, 0]]
+            ),
+            (
+                [1, 2, 3, 4, 5, 6], (3,), (8,), 
+                lambda x: x[0] + x[1] + x[2], [1, 0, 1, 0, 1, 0]
+            ),
+            (
+                [1, 2, 3, 4, 5, 6, 7, 8, 9], (3, 3), (12, 4),
+                lambda x: x[1, 1] * 3, [0, 0, 0, 0, 3, 0, 0, 0, 0]
+            ),
+            (
+                [1, 10, 2, 20, 3, 30], (3, 2), (8, 4),
+                lambda x: x[:, 0].sum(), [1, 0, 1, 0, 1, 0]
+            )
+        ],
+        ids=("simple_1d_to_2d", "overlapping_elements", "matrix_like_strides", "broadcasting",
+             "2d_to_3d", "skip_elements", "complex_view", "interleaved_data")
+    )
+    def test_as_strides(self, data, shape, strides, operation, grad):
         """Test tensor as_strides operation."""
-        data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
-        tensor = Tensor(data, requires_grad=True)
+        tensor = Tensor(data, requires_grad=True, dtype=np.float32, device="cpu")
 
-        result = op.as_strided(tensor, shape=(3, 2), strides=(8, 4))
+        result = op.as_strided(tensor, shape=shape, strides=strides)
 
-        assert_data(result, np.lib.stride_tricks.as_strided(data, shape=(3, 2), strides=(8, 4)))
-        assert result.shape == (3, 2), "Shape should be (3, 2)"
-        assert result.strides == (8, 4), "Strides should be (8, 4)"
+        assert_data(result, np.lib.stride_tricks.as_strided(np.array(data, dtype=np.float32), shape=shape, strides=strides))
+        assert result.shape == shape, f"Shape should be {shape}"
+        assert result.strides == strides, f"Strides should be {strides}"
 
-        a = result[1, 0] * 2
-        
-        a.backward()
+        operation(result).backward()
 
-        assert_grad(tensor, np.array([[0, 0, 2], [0, 0, 0]], dtype=np.float32))
+        assert_grad(tensor, np.array(grad))
 
+    def test_windows_as_strides(self):
+        """Test tensor windows_as_strides operation."""
+        shape = (1, 2, 30, 30)
+        num_items = np.prod(shape)
+        data = Tensor(np.arange(num_items).reshape(shape), dtype=np.float32, requires_grad=True, device="cpu")
+        window_shape = (3, 3)
+
+        shape = (1, 1, 28, 28, 2, *window_shape)
+        strides = (
+            data.strides[0],
+            0,
+            data.strides[2],
+            data.strides[3],
+            data.strides[1],
+            data.strides[2],
+            data.strides[3],
+        )
+        windows = op.as_strided(data, shape=shape, strides=strides)
+
+        expected_windows = np.lib.stride_tricks.sliding_window_view(data, (1, 2, *window_shape)).reshape(shape)
+        assert_data(windows, expected_windows)
+
+        windows.backward()
+
+        assert data.grad is not None
 
 class TestTensorProperties:
-    def test_tensor_properties(self, sample_2d_tensor):
+    def test_tensor_properties(self, sample_2d_tensor: Tensor) -> None:
         """Test basic tensor properties."""
         assert sample_2d_tensor.shape == (2, 3), "Shape should be (2, 3)"
         assert sample_2d_tensor.size == 6, "Size should be 6"
         assert sample_2d_tensor.dtype == np.float32, "Data type should be np.float32"
 
-    def test_grad_management(self):
+    def test_grad_management(self) -> None:
         """Test gradient management for tensors."""
         tensor = Tensor([1, 2, 3], dtype=np.float32, requires_grad=True)
         tensor.clear_grad()
@@ -294,8 +381,22 @@ class TestTensorProperties:
 
 
 class TestTensorMiscOperations:
-    def test_rounding(self):
+    def test_rounding(self) -> None:
         """Test tensor rounding operation."""
-        tensor = Tensor([1.1, 2.5, 3.7], dtype=np.float32)
+        data = np.array([1.1, 2.5, 3.7], dtype=np.float32)
+        tensor = Tensor(data)
         result = op.round(tensor)
+        
+        assert result is not tensor, "Result tensor should be different from input tensor"
+
+        assert_data(tensor, data, "Input tensor should not be modified")
         assert_data(result, np.round(np.array([1.1, 2.5, 3.7], dtype=np.float32)))
+
+    def test_round_inplace(self) -> None:
+        """Test tensor rounding operation inplace."""
+        tensor = Tensor([1.1, 2.5, 3.7], dtype=np.float32)
+        result = op.round(tensor, inplace=True)
+
+        assert result is tensor, "Result tensor should be the same as input tensor"
+        
+        assert_data(tensor, np.round(np.array([1.1, 2.5, 3.7], dtype=np.float32)))

@@ -1,5 +1,5 @@
 from .activation import ActivationFunction
-from src.core import Tensor
+from src.core import Tensor, T
 from ..core.tensor import op
 
 
@@ -10,5 +10,5 @@ class Tanh(ActivationFunction):
     Computes the function: f(x) = tanh(x)
     """
 
-    def __call__[T](self, arr: Tensor[T]) -> Tensor[T]:
+    def __call__(self, arr: Tensor[T]) -> Tensor[T]:
         return op.tanh(arr)

@@ -6,8 +6,8 @@ from .tensor.device import Device
 
 
 class _ConfigMeta(type):
-    _default_device = "auto"
-    _default_dtype = np.float32
+    _default_device: str = "auto"
+    _default_dtype: np.dtype = np.dtype(np.float32)
 
     @property
     def default_device(cls) -> str:
@@ -17,22 +17,25 @@ class _ConfigMeta(type):
             except Exception:
                 cuda = False
 
-            cls._default_device = Device.CUDA if cuda else Device.CPU
+            cls._default_device = Device.CUDA.value if cuda else Device.CPU.value
 
         return cls._default_device
 
     @classmethod
-    def set_default_device(cls, device: str | Device) -> str:
+    def set_default_device(cls, device: str | Device) -> None:
         """
         Set the default device for the neural network.
 
         Args:
             device: Device to use. Can be "cpu", "cuda" or "auto".
         """
-        if device not in Device:
-            raise ValueError("device not in the Device options. Got ")
+        if isinstance(device, Device):
+            device = device.value
 
-        cls._default_device = device.value if isinstance(device, Device) else device
+        if device not in Device:
+            raise ValueError(f"device not in the Device options. Got {device}")
+
+        cls._default_device = device
 
     @property
     def default_dtype(cls) -> np.dtype:

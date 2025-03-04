@@ -1,5 +1,5 @@
 from .activation import ActivationFunction
-from src.core import Tensor
+from src.core import Tensor, T
 
 
 class Relu(ActivationFunction):
@@ -9,5 +9,5 @@ class Relu(ActivationFunction):
     Computes the function: f(x) = max(0, x)
     """
 
-    def __call__[T](self, arr: Tensor[T]) -> Tensor[T]:
+    def __call__(self, arr: Tensor[T]) -> Tensor[T]:
         return arr * (arr > 0)

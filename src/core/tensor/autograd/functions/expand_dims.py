@@ -22,12 +22,7 @@ class ExpandDims(Function):
         a = self.args[0]
         xp = cp.get_array_module(a.data)
 
-        self.result = tensor.Tensor(
-            xp.expand_dims(a.data, self.axis),
-            requires_grad=a.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(xp.expand_dims(a.data, self.axis))
 
     def backward(self) -> None:
         a = self.args[0]

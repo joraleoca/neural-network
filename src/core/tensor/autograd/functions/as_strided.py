@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import cupy as cp
 
 from ..function import Function
@@ -16,30 +14,36 @@ class As_Strided(Function):
         self.shape = shape
         self.strides = strides
 
-    def __call__(self, *, inplace: bool = True) -> "tensor.Tensor":
+    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
         if inplace:
-            raise NotImplementedError("Not inplace as_strided is not supported. It always returns a view.")
+            raise NotImplementedError("Inplace as_strided is not supported. It always returns a view.")
 
         a = self.args[0]
 
         xp = cp.get_array_module(a.data)
 
-        self.result = tensor.Tensor(
-            xp.lib.stride_tricks.as_strided(a.data, self.shape, self.strides),
-            requires_grad=a.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(xp.lib.stride_tricks.as_strided(a.data, self.shape, self.strides))
 
     def backward(self) -> None:
         a = self.args[0]
+        
+        if not a.requires_grad:
+            return
+            
         grad = self.result.grad
+        
+        xp = cp.get_array_module(a.data)
+        gr = xp.zeros_like(a.data)
 
-        if a.requires_grad:
-            xp = cp.get_array_module(a.data)
-            gr = xp.lib.stride_tricks.as_strided(grad, a.shape, a.strides)
+        strides = xp.array(self.strides) // self.result.data.itemsize
+        indices = xp.indices(self.shape).reshape(len(self.shape), -1)
+        offsets = xp.tensordot(strides, indices, axes=1).astype(int)
+    
+        xp.add.at(gr.ravel(), offsets, grad.ravel())
 
-            if a.grad is None:
-                a.grad = deepcopy(gr)
-            else:
-                a.grad += gr
+        if a.grad is None:
+            a.grad = gr
+        else:
+            a.grad += gr
+        
+        

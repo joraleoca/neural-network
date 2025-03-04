@@ -21,14 +21,15 @@ class Index(Function):
 
         a = self.args[0]
 
-        self.result = tensor.Tensor(a.data[self.idx], requires_grad=a.requires_grad)
-
-        return self.result
+        return self._create_output_tensor(a.data[self.idx])
 
     def backward(self) -> None:
         a = self.args[0]
         assert self.result is not None, "Result cannot be None."
         grad = self.result.grad
+
+        if grad.size == 1:
+            grad = grad.item()
 
         if a.requires_grad:
             if a.grad is None:

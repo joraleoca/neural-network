@@ -474,7 +474,7 @@ class TestFunctionalOperations:
         """Test the backward computation for the reshape operation."""
 
         a = Tensor([[1, 2, 3], [4, 5, 6]], dtype=np.float32, requires_grad=True)
-        b = a.reshape((3, 2))
+        b = a.reshape((3, 2), inplace=False)
 
         b.backward()
 

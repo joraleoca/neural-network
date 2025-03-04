@@ -4,7 +4,7 @@ import numpy as np
 from numpy.random import Generator
 
 from ..layer import Layer
-from src.core import Tensor, op
+from src.core import Tensor, T
 
 
 class Flatten(Layer):
@@ -25,8 +25,8 @@ class Flatten(Layer):
         """
         self.rng = np.random.default_rng(rng)
 
-    def forward[T](self, data: Tensor[T]) -> Tensor[T]:
-        return data.reshape((data.shape[0], -1))
+    def forward(self, data: Tensor[T]) -> Tensor[T]:
+        return data.reshape((data.shape[0], -1), inplace=False)
 
     def data_to_store(self) -> dict[str, Any]:
         return {}

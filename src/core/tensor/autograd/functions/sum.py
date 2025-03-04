@@ -24,12 +24,7 @@ class Sum(Function):
         a = self.args[0]
         xp = cp.get_array_module(a.data)
 
-        self.result = tensor.Tensor(
-            xp.sum(a.data, axis=self.axis, keepdims=self.keepdims),
-            requires_grad=a.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(xp.sum(a.data, axis=self.axis, keepdims=self.keepdims))
 
     def backward(self) -> None:
         a = self.args[0]

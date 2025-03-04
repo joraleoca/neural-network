@@ -15,12 +15,7 @@ class Abs(Function):
             a.data[:] = abs(a.data)
             return a
 
-        self.result = tensor.Tensor(
-            abs(a.data),
-            requires_grad=a.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(abs(a.data))
 
     def backward(self) -> None:
         a = self.args[0]

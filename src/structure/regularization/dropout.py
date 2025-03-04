@@ -4,7 +4,7 @@ import numpy as np
 from numpy.random import Generator
 
 from ..layer import Layer
-from src.core import Tensor
+from src.core import Tensor, T
 
 
 class Dropout(Layer):
@@ -34,14 +34,14 @@ class Dropout(Layer):
         self.p = p
         self.rng = np.random.default_rng(rng)
 
-    def forward[T](self, data: Tensor[T]) -> Tensor[T]:
+    def forward(self, data: Tensor[T]) -> Tensor[T]:
         if not data.requires_grad or self.p == 0:
             return data
 
         if self.p < 0 or self.p > 1:
             raise ValueError("The dropout probability must be between 0 and 1.")
 
-        mask = self.rng.binomial(1, 1 - self.p, size=data.shape) / (1 - self.p)
+        mask = Tensor(self.rng.binomial(1, 1 - self.p, size=data.shape) / (1 - self.p), dtype=data.dtype)
 
         return data * mask
 

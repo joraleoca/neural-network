@@ -329,9 +329,9 @@ class TestMaxPool:
 
     def test_feedforward_config_with_list_of_layers(self):
         layers = [
-            MaxPool(channels=10, filter_size=(3, 3)),
-            MaxPool(channels=20, filter_size=(3, 3)),
-            MaxPool(channels=30, filter_size=(3, 3)),
+            MaxPool(channels=10, filter_shape=(3, 3)),
+            MaxPool(channels=20, filter_shape=(3, 3)),
+            MaxPool(channels=30, filter_shape=(3, 3)),
         ]
         config = FeedForwardConfig(
             network_structure=layers,
@@ -348,9 +348,9 @@ class TestMaxPool:
     def test_feedforward_config_with_list_of_tuples(self):
         config = FeedForwardConfig(
             network_structure=[
-                MaxPool(channels=10, filter_size=(3, 3)),
-                MaxPool(channels=20, filter_size=(3, 3)),
-                MaxPool(channels=30, filter_size=(3, 3)),
+                MaxPool(channels=10, filter_shape=(3, 3)),
+                MaxPool(channels=20, filter_shape=(3, 3)),
+                MaxPool(channels=30, filter_shape=(3, 3)),
             ],
             classes=("class1", "class2"),
             hidden_activation=Sigmoid(),

@@ -18,12 +18,7 @@ class Tanh(Function):
             a.data[:] = xp.tanh(a.data)
             return a
 
-        self.result = tensor.Tensor(
-            xp.tanh(a.data),
-            requires_grad=a.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(xp.tanh(a.data))
 
     def backward(self) -> None:
         a = self.args[0]

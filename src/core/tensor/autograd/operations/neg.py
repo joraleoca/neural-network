@@ -15,12 +15,9 @@ class Neg(Function):
             a.data[:] = -a.data
             return a
 
-        self.result = tensor.Tensor(
-            -a.data,
-            requires_grad=a.requires_grad,
-        )
 
-        return self.result
+        return self._create_output_tensor(-a.data)
+
 
     def backward(self) -> None:
         a = self.args[0]

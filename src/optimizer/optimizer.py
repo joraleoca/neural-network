@@ -34,10 +34,16 @@ class Optimizer(ABC):
             biases_grad.append(layer.biases_grad)
 
         # Gradient normalization
-        global_norm = np.sqrt(sum(np.linalg.norm(d) ** 2 for d in weights_grad))
+        global_norm = np.sqrt(
+            sum(np.linalg.norm(d) ** 2 for d in weights_grad) +
+            sum(np.linalg.norm(d) ** 2 for d in biases_grad)
+        )
         if global_norm > self.MAX_DELTA_NORM:
             clip_factor = self.MAX_DELTA_NORM / (global_norm + EPSILON)
-            weights_grad = [d * clip_factor for d in weights_grad]
+            
+            for i in range(len(weights_grad)):
+                weights_grad[i] *= clip_factor
+                biases_grad[i] *= clip_factor
 
         self._optimize_weights(lr, weights, weights_grad)
         self._optimize_biases(lr, biases, biases_grad)

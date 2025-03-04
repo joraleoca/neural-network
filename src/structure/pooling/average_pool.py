@@ -18,7 +18,7 @@ class AveragePool(Pool):
     def from_data(data: dict[str, Any]) -> "AveragePool":
         return AveragePool(
             channels=data["channels"].item(),
-            filter_size=tuple(data["filter_size"]),
+            filter_shape=tuple(data["filter_shape"]),
             stride=data["stride"].item(),
             padding=data["padding"].item()
         )

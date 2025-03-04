@@ -16,12 +16,7 @@ class Flatten(Function):
 
         a = self.args[0]
 
-        self.result = tensor.Tensor(
-            a.data.flatten(),
-            requires_grad=a.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(a.data.flatten())
 
     def backward(self) -> None:
         a = self.args[0]

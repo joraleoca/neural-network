@@ -17,12 +17,8 @@ class Div(Function):
             a.data[:] /= b.data + EPSILON
             return a
 
-        self.result = tensor.Tensor(
-            a.data / (b.data + EPSILON),
-            requires_grad=a.requires_grad or b.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(a.data / (b.data + EPSILON))
+    
 
     def backward(self) -> None:
         a, b = self.args

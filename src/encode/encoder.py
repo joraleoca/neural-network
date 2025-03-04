@@ -23,7 +23,7 @@ class Encoder[T, encode_type](ABC):
         Args:
             label (T): The label to be encoded.
         Returns:
-            T: The encoded label.
+            encode_type: The encoded label.
         """
         return self.encode(label)
 
@@ -34,7 +34,7 @@ class Encoder[T, encode_type](ABC):
         Args:
             label (T): The label to be encoded.
         Returns:
-            T: The encoded representation of the label.
+            encode_type: The encoded representation of the label.
         """
         pass
 
@@ -43,7 +43,7 @@ class Encoder[T, encode_type](ABC):
         """
         Decodes the given encoded data into a string.
         Args:
-            encoded (T | Any): The data to be decoded. Can be of type `encode_type` or "encode_type-like" probability.
+            encoded (encode_type | Any): The data to be decoded. Can be of type `encode_type` or "encode_type-like" probability.
         Returns:
             str: The decoded string.
         """

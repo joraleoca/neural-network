@@ -1,9 +1,7 @@
 from copy import deepcopy
 from pathlib import Path
 from typing import Iterable
-from time import time # TODO: Delete this and where it is used
 
-import cupy as cp
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -99,13 +97,13 @@ class NeuralNetwork:
 
         for layer in self.layers:
             last_output = layer.forward(last_output)
-
+            
         return last_output
     
 
     def _prepare_data_for_training(
         self, data: Iterable[Tensor | ArrayLike], expected: Iterable[str]
-    ) -> tuple[list[Tensor], list[str]]:
+    ) -> tuple[list[Tensor], list[Tensor]]:
         """
         Prepare the data for training by encoding the labels and converting the data to Tensors.
 
@@ -113,33 +111,34 @@ class NeuralNetwork:
             data (Iterable[Tensor | ArrayLike]): The input data for training.
             expected (Iterable[str]): The expected labels for the input data.
         Returns:
-            tuple[list[Tensor], list[str]]: A tuple containing the input data as Tensors and the
-                encoded labels.
+            tuple[list[Tensor], list[Tensor]]: A tuple containing the input data as Tensors and the encoded labels.
         """
         data_ = []
 
-        for data in data:
-            if isinstance(data, Tensor):
-                data.requires_grad = True
-                data_.append(data)
+        for arr in data:
+            if isinstance(arr, Tensor):
+                arr.requires_grad = True
+                data_.append(arr)
             else:
-                data_.append(Tensor(data, requires_grad=True))
+                data_.append(Tensor(arr, requires_grad=True))
 
             if isinstance(self.layers[0], Convolution) and data_[-1].ndim == 2:
                 data_[-1] = op.expand_dims(data_[-1], axis=0)
 
-        expected = [self.encoder.encode(label) for label in expected]
+        out_expected = [self.encoder.encode(label) for label in expected]
 
-        return data_, expected
+        return data_, out_expected
 
-    def _batch_data(self, data: list[Tensor], expected: list[str], batch_size: int) -> list[tuple[Tensor, Tensor]]:
+    def _batch_data(
+        self, data: list[Tensor], expected: list[Tensor], batch_size: int
+    ) -> list[tuple[Tensor, Tensor]]:
         """
         Batch the data for training.
 
         Args:
             data (list[Tensor]): The input data for training.
-            expected (list[str]): The expected labels for the input data.
-            n_batches (int): The number of batches to create.
+            expected (list[Tensor]): The expected labels for the input data.
+            batch_size (int): The number of batches to create.
         Returns:
             list[tuple[Tensor, Tensor]]: A list of tuples, where each tuple contains:
                 - A Tensor representing the input data for a batch.
@@ -214,11 +213,8 @@ class NeuralNetwork:
         batches = self._batch_data(data_train, expected_train_encoded, config.batch_size)
 
         for epoch in range(config.epochs + 1):
-            start = time()
-            losses = self._backward(batches, config)
+            losses = self._backward(batches, config, (data_evaluate, expected_evaluate))
             current_epoch_loss = np.mean(losses)
-
-            cp.get_default_memory_pool().free_all_blocks()
 
             val_accuracy = self.evaluate(data_evaluate, expected_evaluate)
 
@@ -240,18 +236,14 @@ class NeuralNetwork:
             config.lr.update(epoch)
 
             if config.debug:
-                train_accuracy = self.evaluate(data_train, expected_train)
                 # Store metrics for plotting
                 metrics["losses"].append(current_epoch_loss)
                 metrics["test_acc"].append(val_accuracy)
-                metrics["train_acc"].append(train_accuracy)
                 print(
                     f"Epoch {epoch}, "
                     f"Accuracy: {val_accuracy:.4f}, "
                     f"Loss: {current_epoch_loss:.4f}, "
-                    f"train_acc: {train_accuracy:.4f}"
                 )
-                print(f"Time taken: {time() - start:.4f}s")
 
         self.layers = best_layers
         self._trainable_layers = best_trainable_layers
@@ -265,9 +257,7 @@ class NeuralNetwork:
         if config.debug:
             self._plot_metrics_train(**metrics)
 
-    def _backward(
-        self, batches: list[tuple[Tensor, Tensor]], config: TrainingConfig
-    ) -> list[float]:
+    def _backward(self, batches: list[tuple[Tensor, Tensor]], config: TrainingConfig, eval) -> list[float]:
         """
         Perform the backward pass of the neural network to update weights and biases.
 
@@ -304,22 +294,28 @@ class NeuralNetwork:
 
         return losses
 
-    def evaluate(self, data: list[Tensor], expected: list[str]) -> float:
+    def evaluate(self, data: Iterable[Tensor], expected: Iterable[str]) -> float:
         """
         Evaluate the performance of the neural network on a given dataset.
 
         Args:
-            data (list[tuple[Tensor, str]]): A list of tuples where each tuple contains an input
-                             array and the corresponding label.
+            data (Iterable[Tensor]): The input data for evaluation.
+            expected (Iterable[str]): The expected labels for the input data.
+
         Returns:
             float: The accuracy of the neural network on the provided dataset, calculated as the
                proportion of correctly classified inputs.
         """
-        correct = int(sum(
-            self.encoder.decode(self.forward_pass(input_)) == label
-            for input_, label in zip(data, expected)
-        ))
-        return correct / len(data)
+        correct = 0
+        total = 0
+
+        for input_, label in zip(data, expected):
+            total += 1
+
+            if self.encoder.decode(self.forward_pass(input_)) == label:
+                correct += 1
+
+        return correct / total
 
     def store_params(self, file: str | Path = c.FILE_NAME) -> None:
         """
@@ -378,14 +374,6 @@ class NeuralNetwork:
         plt.xlabel("Epochs")
         plt.ylabel("Accuracy")
         plt.title("Test Accuracy")
-        plt.legend()
-
-        # Plot training accuracy
-        plt.subplot(1, 3, 3)
-        plt.plot(epochs, train_acc, label="Training Accuracy")
-        plt.xlabel("Epochs")
-        plt.ylabel("Accuracy")
-        plt.title("Training Accuracy")
         plt.legend()
 
         plt.tight_layout()

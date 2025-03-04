@@ -15,18 +15,15 @@ class Reshape(Function):
 
     def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
         a = self.args[0]
+        xp = cp.get_array_module(a.data)
+
+        data = xp.reshape(a.data, self.shape)
 
         if inplace:
-            a.data.reshape(self.shape)
+            a.data = data
             return a
 
-        xp = cp.get_array_module(a.data)
-        self.result = tensor.Tensor(
-            xp.reshape(a.data, self.shape),
-            requires_grad=a.requires_grad,
-        )
-
-        return self.result
+        return self._create_output_tensor(data)
 
     def backward(self) -> None:
         a = self.args[0]

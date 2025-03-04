@@ -12,7 +12,7 @@ class CategoricalCrossentropy(Loss):
     Categorical Crossentropy loss.
     """
 
-    __slots__ = ["smoothing_factor"]
+    __slots__ = "smoothing_factor"
 
     smoothing_factor: float
 

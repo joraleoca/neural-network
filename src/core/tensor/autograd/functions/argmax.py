@@ -1,3 +1,4 @@
+from typing import SupportsIndex
 from copy import deepcopy
 
 import cupy as cp
@@ -11,24 +12,23 @@ class Argmax(Function):
 
     __slots__ = "axis", "keepdims"
 
-    def __init__(self, a: "tensor.Tensor", *, axis: int | tuple[int, ...] | None = None, keepdims: bool = False):
+    def __init__(self, a: "tensor.Tensor", *, axis: SupportsIndex | None = None, keepdims: bool = False):
         self.args = (a,)
         self.axis = axis
         self.keepdims = keepdims
 
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
-        a = self.args[0]
+        if axis is None and keepdims:
+            raise ValueError("keepdims can only be set to True if axis is specified. Got axis=None and keepdims=True")
 
+    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
         if inplace:
             raise ValueError("Inplace argmax is not supported.")
 
-        xp = cp.get_array_module(a.data)
-        self.result = tensor.Tensor(
-            xp.argmax(a.data, axis=self.axis, keepdims=self.keepdims),
-            requires_grad=a.requires_grad,
+        a = self.args[0]
+        
+        return self._create_output_tensor(
+            a.data.argmax(axis=self.axis, keepdims=self.keepdims) # type: ignore Already checked in the constructor
         )
-
-        return self.result
 
     def backward(self) -> None:
         a = self.args[0]
