@@ -8,27 +8,6 @@ from src.config.ff_network import FeedForwardConfig
 
 
 class TestDense:
-    def test_feedforward_config_with_list_of_ints(self):
-        config = FeedForwardConfig(
-            network_structure=[10, 20, 30],
-            classes=("class1", "class2"),
-            hidden_activation=Sigmoid(),
-            output_activation=Sigmoid(),
-            initializer=HeUniform(),
-            random_seed=42,
-        )
-
-        layers: list[Trainable] = [layer for layer in config.network_structure]
-
-        assert len(config.network_structure) == 3
-        assert all(isinstance(layer, Dense) for layer in config.network_structure)
-        assert layers[0].output_dim == 10
-        assert layers[1].output_dim == 20
-        assert layers[2].output_dim == 30
-        assert isinstance(layers[0].activation_function, Sigmoid)
-        assert isinstance(layers[1].activation_function, Sigmoid)
-        assert isinstance(layers[2].activation_function, Sigmoid)
-
     def test_feedforward_config_with_list_of_layers(self):
         layers = [
             Dense(features=10),
@@ -188,7 +167,7 @@ class TestDense:
             random_seed=42,
         )
 
-        layers: list[Trainable] = [layer for layer in config.network_structure]
+        layers: list[Trainable] = [layer for layer in config.network_structure] 
 
         assert isinstance(layers[0]._initializer, HeUniform)
         assert isinstance(layers[1]._initializer, XavierNormal)
@@ -196,27 +175,6 @@ class TestDense:
 
 
 class TestConvultion:
-    def test_feedforward_config_with_list_of_ints(self):
-        config = FeedForwardConfig(
-            network_structure=[10, 20, 30],
-            classes=("class1", "class2"),
-            hidden_activation=Sigmoid(),
-            output_activation=Sigmoid(),
-            initializer=HeUniform(),
-            random_seed=42,
-        )
-
-        layers: list[Trainable] = [layer for layer in config.network_structure]
-
-        assert len(config.network_structure) == 3
-        assert all(isinstance(layer, Dense) for layer in config.network_structure)
-        assert layers[0].output_dim == 10
-        assert layers[1].output_dim == 20
-        assert layers[2].output_dim == 30
-        assert isinstance(layers[0].activation_function, Sigmoid)
-        assert isinstance(layers[1].activation_function, Sigmoid)
-        assert isinstance(layers[2].activation_function, Sigmoid)
-
     def test_feedforward_config_with_list_of_layers(self):
         layers = [
             Convolution(channels=10, kernel_shape=(3, 3)),
@@ -306,30 +264,31 @@ class TestConvultion:
 
 
 class TestMaxPool:
-    def test_feedforward_config_with_list_of_ints(self):
-        config = FeedForwardConfig(
-            network_structure=[10, 20, 30],
-            classes=("class1", "class2"),
-            hidden_activation=Sigmoid(),
-            output_activation=Sigmoid(),
-            initializer=HeUniform(),
-            random_seed=42,
-        )
+    def test_create(self):
+        layer = MaxPool(channels=10, filter_shape=(3, 3), stride=1, padding=0)
+        assert layer.channels == 10
+        assert layer.filter_shape == (3, 3)
+        assert layer.stride == 1
+        assert layer.padding == 0
 
-        layers: list[Trainable] = [layer for layer in config.network_structure]
+    @pytest.mark.parametrize(
+        "channels, filter_shape, stride, padding",
+        [
+            (-10, (3, 3), 1, 0),
+            (20, -3, 1, 0),
+            (30, (3, 3), 0, 0),
+            (30, (3, 3), -1, 0),
+            (30, (3, 3), 0, -1),
+        ],
+        ids=("negative_channels", "invalid_filter_shape", "zero_stride", "negative_stride", "negative_padding"),
+    )
+    def test_create_error(self, channels, filter_shape, stride, padding):
+        with pytest.raises(ValueError):
+            MaxPool(channels=channels, filter_shape=filter_shape, stride=stride, padding=padding)
 
-        assert len(config.network_structure) == 3
-        assert all(isinstance(layer, Dense) for layer in config.network_structure)
-        assert layers[0].output_dim == 10
-        assert layers[1].output_dim == 20
-        assert layers[2].output_dim == 30
-        assert isinstance(layers[0].activation_function, Sigmoid)
-        assert isinstance(layers[1].activation_function, Sigmoid)
-        assert isinstance(layers[2].activation_function, Sigmoid)
-
-    def test_feedforward_config_with_list_of_layers(self):
+    def test_creating_network(self):
         layers = [
-            MaxPool(channels=10, filter_shape=(3, 3)),
+            MaxPool(channels=10, filter_shape=(3, 3), stride=10, padding=10),
             MaxPool(channels=20, filter_shape=(3, 3)),
             MaxPool(channels=30, filter_shape=(3, 3)),
         ]
@@ -344,25 +303,11 @@ class TestMaxPool:
 
         assert len(config.network_structure) == 3
         assert config.network_structure == layers
-
-    def test_feedforward_config_with_list_of_tuples(self):
-        config = FeedForwardConfig(
-            network_structure=[
-                MaxPool(channels=10, filter_shape=(3, 3)),
-                MaxPool(channels=20, filter_shape=(3, 3)),
-                MaxPool(channels=30, filter_shape=(3, 3)),
-            ],
-            classes=("class1", "class2"),
-            hidden_activation=Sigmoid(),
-            output_activation=Sigmoid(),
-            initializer=HeUniform(),
-            random_seed=42,
-        )
-
-        layers: list[Trainable] = [layer for layer in config.network_structure]
-
         assert len(config.network_structure) == 3
         assert all(isinstance(layer, MaxPool) for layer in config.network_structure)
         assert layers[0].input_dim == 10
         assert layers[0].output_dim == 10
-        assert layers[1].input_dim == 20
+        assert layers[0].filter_shape == (3, 3)
+        assert layers[0].stride == 10
+        assert layers[0].padding == 10
+        

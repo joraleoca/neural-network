@@ -29,7 +29,7 @@ class Pool(Layer, ABC):
     def __init__(
         self,
         channels: int,
-        filter_shape: tuple[int, int],
+        filter_shape: tuple[int, int] | int,
         *,
         stride: int = 1,
         padding: int = 0,
@@ -38,7 +38,7 @@ class Pool(Layer, ABC):
         Initializes a new layer in the neural network.
         Args:
             channels (int): The number of channels in the input and output.
-            filter_shape (tuple[int, int]): The shape of the filter.
+            filter_shape (tuple[int, int] | int): The shape of the filter.
             stride (int): The stride of the sliding window.
             padding (int): The padding of the sliding window.
         Raises:
@@ -50,6 +50,13 @@ class Pool(Layer, ABC):
             raise ValueError(f"The stride value must be positive. Got {stride}")
         if padding < 0:
             raise ValueError(f"The padding value must be non-negative. Got {padding}")
+        
+        if isinstance(filter_shape, int):
+            filter_shape = (filter_shape, filter_shape)
+        
+        if any(i <= 0 for i in filter_shape):
+            raise ValueError(f"The filter shape must be positive. Got {filter_shape}")
+
 
         self.channels = channels
         self.filter_shape = filter_shape

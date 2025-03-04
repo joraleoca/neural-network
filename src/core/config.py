@@ -52,4 +52,4 @@ class _ConfigMeta(type):
         cls._default_dtype = np.dtype(dtype)
 
 class Config(metaclass=_ConfigMeta):
-    """Configuration class for the neural network."""
+    """Configuration class for default parameters of the tensors."""

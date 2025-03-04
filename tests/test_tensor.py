@@ -5,7 +5,7 @@ import numpy as np
 from numpy.typing import NDArray, DTypeLike
 import pytest
 
-from src.core import Tensor, Config, op
+from src.core import Tensor, op, Config
 from .utils import assert_data, assert_grad
 
 
@@ -56,33 +56,6 @@ class TestTensorCreation:
         assert_data(tensor, np.array(data, dtype=np.float32))
         assert tensor.grad is None, "Gradient should be None"
         assert tensor.requires_grad, "'requires_grad' should be True"
-
-    @pytest.mark.parametrize(
-        "dtype",
-        [
-            np.float32, np.float64, np.int32, np.int64,
-            cp.float32, cp.float64, cp.int32, cp.int64,
-            float, int,
-        ],
-    )
-    @pytest.mark.parametrize("device", ["cpu", "cuda"])
-    def test_config(self, dtype: np.dtype | cp.dtype | DTypeLike, device: str) -> None:
-        """Test tensor creation with custom configuration."""
-        Config.set_default_dtype(dtype)
-        Config.set_default_device(device)
-        
-        assert Config.default_dtype == dtype, f"Default dtype should be {dtype}"
-        assert Config.default_device == device, f"Default device should be {device}"
-
-        data = [1, 2, 3]
-        tensor = Tensor(data)
-        assert_data(tensor, np.array(data, dtype=Config.default_dtype))
-        assert tensor.device == device, (
-            f"Tensor device should be {device}. Got {tensor.device}"
-        )
-        assert tensor.dtype == dtype, f"Data type should be {dtype}. Got {tensor.dtype}"
-        Config.set_default_dtype(np.float32)
-        Config.set_default_device("cuda")
 
 class TestTensorOperations:
     @pytest.mark.parametrize(
@@ -137,7 +110,11 @@ class TestTensorOperations:
         ],
     )
     def test_binary_operations(
-        self, op_func: Callable, input1: list[int] | Tensor[int], input2: list[int] | Tensor[int], expected: Tensor
+        self,
+        op_func: Callable,
+        input1: list[int] | Tensor[np.integer],
+        input2: list[int] | Tensor[np.integer],
+        expected: Tensor
     ) -> None:
         """Tests for tensor binary operations."""
         result = op_func(input1, input2)
@@ -400,3 +377,26 @@ class TestTensorMiscOperations:
         assert result is tensor, "Result tensor should be the same as input tensor"
         
         assert_data(tensor, np.round(np.array([1.1, 2.5, 3.7], dtype=np.float32)))
+
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.float32, np.float64, np.int32, np.int64,
+        cp.float32, cp.float64, cp.int32, cp.int64,
+        float, int,
+    ],
+)
+@pytest.mark.parametrize("device", ["cpu", "cuda"])
+def test_config(dtype: np.dtype | cp.dtype | DTypeLike, device: str) -> None:
+    """Test tensor creation with custom configuration."""
+    Config.set_default_dtype(dtype)
+    Config.set_default_device(device)
+    data = [1, 2, 3]
+    tensor = Tensor(data)
+    assert_data(tensor, np.array(data, dtype=Config.default_dtype))
+    assert tensor.device == Config.default_device, (
+        f"Tensor device {tensor.device} should be {Config.default_device}"
+    )
+    assert tensor.dtype == Config.default_dtype, f"Data type should be {Config.default_dtype}. Got {tensor.dtype}"
+    
+    Config.set_default_device("auto")

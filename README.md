@@ -65,7 +65,12 @@ X_test = Tensor(...)  # Your testing data
 y_test = Tensor(...)  # Your testing labels
 
 config = FeedForwardConfig(
-    network_structure=[X_train.shape[1], 64, 32, 16],
+    network_structure=[
+        Dense(X_train.shape[1]), 
+        Dense(64),
+        Dense(32),
+        Dense(16),
+    ],
     classes=("class1", "class2", "class3"),
     hidden_activation=LeakyRelu(),
     output_activation=Softmax(),
