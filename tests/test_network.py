@@ -1,6 +1,6 @@
 import pytest
 
-from src.structure import Dense, Convolution, MaxPool, Trainable, Sigmoid, Softmax, Relu, Tanh
+from src.structure import Dense, Convolution, MaxPool, Trainable, Sigmoid, Softmax, Relu
 from src.initialization import HeUniform, XavierNormal
 from src.encode import Encoder
 from src.config.ff_network import FeedForwardConfig
