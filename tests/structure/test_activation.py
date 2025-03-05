@@ -1,10 +1,9 @@
 import pytest
 import numpy as np
 
-from .utils import assert_data, assert_grad
+from tests.utils import assert_data, assert_grad
 from src.core import Tensor
-from src.activation import LeakyRelu, Relu, Sigmoid, Softmax, Tanh
-from src.activation import activation_from_name
+from src.structure import LeakyRelu, Relu, Sigmoid, Softmax, Tanh, layer_from_name
 
 
 class TestActivation:
@@ -86,9 +85,9 @@ class TestActivationUtils:
         ],
     )
     def test_activation_from_name(self, name, class_type):
-        assert activation_from_name(name) == class_type
+        assert layer_from_name(name) == class_type
 
     @pytest.mark.parametrize("invalid_name", ["activation_test", "relu", "", "Unknown"])
     def test_activation_from_name_error(self, invalid_name):
         with pytest.raises(ValueError):
-            activation_from_name(invalid_name)
+            layer_from_name(invalid_name)

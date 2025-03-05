@@ -2,6 +2,7 @@ from .layer import Layer
 from .trainable import Dense, Convolution
 from .regularization import Dropout, Flatten
 from .pooling import MaxPool, AveragePool
+from .activation import Relu, LeakyRelu, Sigmoid, Softmax, Tanh
 
 
 def layer_from_name(name: str) -> type[Layer]:
@@ -26,5 +27,15 @@ def layer_from_name(name: str) -> type[Layer]:
             return MaxPool
         case AveragePool.__name__:
             return AveragePool
+        case Relu.__name__:
+            return Relu
+        case LeakyRelu.__name__:
+            return LeakyRelu
+        case Sigmoid.__name__:
+            return Sigmoid
+        case Softmax.__name__:
+            return Softmax
+        case Tanh.__name__:
+            return Tanh
         case _:
             raise ValueError(f"Unknown layer name: {name}")

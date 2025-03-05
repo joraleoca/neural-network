@@ -25,7 +25,7 @@ class Flatten(Layer):
         """
         self.rng = np.random.default_rng(rng)
 
-    def forward(self, data: Tensor[T]) -> Tensor[T]:
+    def __call__(self, data: Tensor[T]) -> Tensor[T]:
         return data.reshape((data.shape[0], -1), inplace=False)
 
     def data_to_store(self) -> dict[str, Any]:

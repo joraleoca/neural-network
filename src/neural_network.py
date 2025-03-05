@@ -96,7 +96,7 @@ class NeuralNetwork:
         last_output = inputs
 
         for layer in self.layers:
-            last_output = layer.forward(last_output)
+            last_output = layer(last_output)
             
         return last_output
     
@@ -213,7 +213,7 @@ class NeuralNetwork:
         batches = self._batch_data(data_train, expected_train_encoded, config.batch_size)
 
         for epoch in range(config.epochs + 1):
-            losses = self._backward(batches, config, (data_evaluate, expected_evaluate))
+            losses = self._backward(batches, config)
             current_epoch_loss = np.mean(losses)
 
             val_accuracy = self.evaluate(data_evaluate, expected_evaluate)
@@ -257,7 +257,7 @@ class NeuralNetwork:
         if config.debug:
             self._plot_metrics_train(**metrics)
 
-    def _backward(self, batches: list[tuple[Tensor, Tensor]], config: TrainingConfig, eval) -> list[float]:
+    def _backward(self, batches: list[tuple[Tensor, Tensor]], config: TrainingConfig) -> list[float]:
         """
         Perform the backward pass of the neural network to update weights and biases.
 
@@ -291,7 +291,7 @@ class NeuralNetwork:
 
             for layer in self._trainable_layers:
                 layer.clear_params_grad()
-
+        
         return losses
 
     def evaluate(self, data: Iterable[Tensor], expected: Iterable[str]) -> float:

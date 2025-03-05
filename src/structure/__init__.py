@@ -6,6 +6,7 @@ from .layer import Layer
 from .trainable import Trainable, Dense, Convolution
 from .pooling import Pool, MaxPool, AveragePool
 from .regularization import Dropout, Flatten
+from .activation import ActivationFunction, Relu, LeakyRelu, Sigmoid, Softmax, Tanh
 
 from .utils import layer_from_name
 
@@ -20,4 +21,10 @@ __all__ = (
     "Dropout",
     "Flatten",
     "layer_from_name",
+    "ActivationFunction",
+    "Relu",
+    "LeakyRelu",
+    "Sigmoid",
+    "Softmax",
+    "Tanh",
 )

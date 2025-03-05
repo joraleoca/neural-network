@@ -1,5 +1,4 @@
-from src.structure import Layer, Trainable
-from src.activation import ActivationFunction
+from src.structure import Layer, Trainable, ActivationFunction
 from src.initialization import Initializer, HeUniform
 from src.encode import Encoder
 from src.loader import Loader
@@ -15,8 +14,6 @@ class FeedForwardConfig:
         network_structure (list[Layer]): A list of layers that compose the neural network.
         classes (tuple): A tuple containing the class labels for the output layer.
         initializer (Initializer | Loader): The initializer for the network parameters.
-        hidden_activation (ActivationFunction | None): The activation function for the hidden layers.
-        output_activation (ActivationFunction | None): The activation function for the output layer.
         encoder (type[Encoder] | None): The encoder used to encode the input data.
         random_seed (int | None): The random seed for reproducibility.
     """
@@ -27,9 +24,6 @@ class FeedForwardConfig:
 
     initializer: Initializer | Loader = HeUniform()
 
-    hidden_activation: ActivationFunction | None = None
-    output_activation: ActivationFunction | None = None
-
     encoder: type[Encoder] | None = None
 
     random_seed: int | None = None
@@ -39,15 +33,11 @@ class FeedForwardConfig:
         network_structure: list[Layer] | None,
         classes: tuple,
         initializer: Initializer | Loader = HeUniform(),
-        hidden_activation: ActivationFunction | None = None,
-        output_activation: ActivationFunction | None = None,
         encoder: type[Encoder] | None = None,
         random_seed: int | None = None,
     ) -> None:
         self.classes = classes
         self.initializer = initializer
-        self.hidden_activation = hidden_activation
-        self.output_activation = output_activation
         self.encoder = encoder
         self.random_seed = random_seed
 
@@ -74,12 +64,6 @@ class FeedForwardConfig:
         for layer in structure:
             if not isinstance(layer, Trainable):
                 continue
-
-            if layer.activation_function is None:
-                if layer is structure[-1]:
-                    layer.activation_function = self.output_activation
-                else:
-                    layer.activation_function = self.hidden_activation
 
             if layer.initializer is None:
                 layer.initializer = self.initializer

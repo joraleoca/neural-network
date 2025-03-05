@@ -5,7 +5,6 @@ from numpy.random import Generator
 
 from .trainable import Trainable
 from src.core import Tensor, op
-from src.activation import ActivationFunction, activation_from_name
 from src.initialization import Initializer
 import src.constants as c
 
@@ -32,7 +31,6 @@ class Convolution(Trainable):
     required_fields: ClassVar[tuple[str, ...]] = (
         c.WEIGHT_PREFIX,
         c.BIAS_PREFIX,
-        c.ACTIVATION_PREFIX,
         "stride",
         "padding",
     )
@@ -41,7 +39,6 @@ class Convolution(Trainable):
         self,
         channels: int | tuple[int, int],
         kernel_shape: tuple[int, int],
-        activation_function: ActivationFunction | None = None,
         initializer: Initializer | None = None,
         *,
         stride: int = 1,
@@ -70,7 +67,7 @@ class Convolution(Trainable):
                 f"The kernel size must have 2 dimension. Got {len(kernel_shape)}"
             )
 
-        super().__init__(activation_function, initializer, rng=rng)
+        super().__init__(initializer, rng=rng)
         self.kernel_shape = kernel_shape
         self.stride = stride
         self.padding = padding
@@ -93,7 +90,7 @@ class Convolution(Trainable):
                 f"The out channels must be positive. Got {self._out_channels}"
             )
 
-    def forward(
+    def __call__(
         self,
         data: Tensor[np.floating],
     ) -> Tensor[np.floating]:
@@ -115,12 +112,7 @@ class Convolution(Trainable):
                 raise ValueError(
                     f"Expected 4D input (batch, channels, height, width). Got {data.shape}"
                 )
-
-        if hasattr(self, "_in_channels") and data.shape[1] != self._in_channels:
-            raise ValueError(
-                f"The input must have {self._in_channels} channels. Got {data.shape[1]}"
-            )
-
+        
         if not hasattr(self, "weights"):
             self._in_channels = data.shape[1]
             self._initializate_weights() 
@@ -129,6 +121,11 @@ class Convolution(Trainable):
             self.biases = op.zeros(
                 (self._out_channels, 1, 1),
                 requires_grad=self.requires_grad,
+            )
+
+        if data.shape[1] != self._in_channels:
+            raise ValueError(
+                f"The input must have {self._in_channels} channels. Got {data.shape[1]}"
             )
 
         pad_width = (
@@ -145,9 +142,6 @@ class Convolution(Trainable):
 
         if out.ndim == 3:
             out = op.expand_dims(out, 0)
-
-        if self.activation_function:
-            out = self.activation_function(out)
 
         return out
 
@@ -217,7 +211,6 @@ class Convolution(Trainable):
         return {
             c.WEIGHT_PREFIX: self.weights or None,
             c.BIAS_PREFIX: self.biases or None,
-            c.ACTIVATION_PREFIX: self.activation_function.__class__.__name__ or None,
             "stride": self.stride or None,
             "padding": self.padding or None,
         }
@@ -234,8 +227,5 @@ class Convolution(Trainable):
         layer._in_channels = in_channels
         layer.weights = Tensor(weights)
         layer.biases = Tensor(data[c.BIAS_PREFIX])
-        layer.activation_function = activation_from_name(
-            data[c.ACTIVATION_PREFIX].item()
-        )()
 
         return layer

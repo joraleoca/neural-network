@@ -11,7 +11,7 @@ class Layer(ABC):
     required_fields: ClassVar[tuple[str, ...]]
 
     @abstractmethod
-    def forward(
+    def __call__(
         self,
         data: Tensor[np.floating],
     ) -> Tensor[np.floating]:

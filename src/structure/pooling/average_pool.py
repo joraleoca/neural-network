@@ -7,7 +7,7 @@ from src.core import Tensor, op
 
 
 class AveragePool(Pool):
-    def forward(self, data: Tensor[np.floating]) -> Tensor[np.floating]:
+    def __call__(self, data: Tensor[np.floating]) -> Tensor[np.floating]:
         data = self._pad(data, const_val=data.dtype.type(0))
 
         windows = self._windows(data)

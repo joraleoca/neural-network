@@ -8,7 +8,7 @@ from src.constants import EPSILON
 
 
 class MaxPool(Pool):
-    def forward(self, data: Tensor[np.floating]) -> Tensor[np.floating]:
+    def __call__(self, data: Tensor[np.floating]) -> Tensor[np.floating]:
         data = self._pad(data, const_val=data.dtype.type(-EPSILON))
 
         windows = self._windows(data)

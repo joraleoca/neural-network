@@ -5,7 +5,6 @@ import numpy as np
 
 from ..layer import Layer
 from src.core import Tensor
-from src.activation import ActivationFunction
 from src.initialization import Initializer
 
 
@@ -13,7 +12,6 @@ class Trainable(Layer, ABC):
     __slots__ = [
         "weights",
         "biases",
-        "activation_function",
         "rng",
         "_requires_grad",
         "_initializer",
@@ -21,8 +19,6 @@ class Trainable(Layer, ABC):
 
     weights: Tensor[np.floating]
     biases: Tensor[np.floating]
-
-    activation_function: ActivationFunction | None
 
     rng: Any
 
@@ -33,13 +29,11 @@ class Trainable(Layer, ABC):
 
     def __init__(
         self,
-        activation_function: ActivationFunction | None, 
         initializer: Initializer | None = None,
         *,
         requires_grad: bool = False,
         rng: Any = None
     ) -> None:
-        self.activation_function = activation_function
         self._initializer = initializer
         self._requires_grad = requires_grad
         self.rng = rng

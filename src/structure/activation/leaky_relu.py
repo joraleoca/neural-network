@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import cupy as cp
 
 from .activation import ActivationFunction
@@ -20,6 +22,8 @@ class LeakyRelu(ActivationFunction):
 
     ALPHA: float
 
+    required_fields: ClassVar[tuple[str, ...]] = ("ALPHA",)
+
     def __init__(self, alpha: float = 0.01) -> None:
         """
         Initialize LeakyRelu with given alpha parameter.
@@ -38,3 +42,12 @@ class LeakyRelu(ActivationFunction):
                               xp.ones((1,), dtype=arr.dtype),
                               xp.array([self.ALPHA], dtype=arr.dtype)
                             )
+
+    def data_to_store(self) -> dict[str, float]:
+        return {
+            "ALPHA": self.ALPHA,
+        }
+    
+    @staticmethod
+    def from_data(data: dict[str, float]) -> "LeakyRelu":
+        return LeakyRelu(data["ALPHA"])

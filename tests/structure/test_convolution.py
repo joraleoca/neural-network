@@ -3,7 +3,6 @@ import pytest
 import numpy as np
 
 from src.structure import Convolution
-from src.activation import LeakyRelu, Sigmoid, Tanh
 from src.initialization import LeCunNormal, HeNormal
 from src.core import Tensor, op
 
@@ -19,9 +18,6 @@ class TestConvolution:
         assert layer.output_dim == out_channels, (
             f"Output channels should be 10. Got {layer.output_dim}."
         )
-        assert layer.activation_function is None, (
-            f"Activation function should be None. Got {layer.activation_function}."
-        )
         assert layer.kernel_shape == kernel_shape, "Kernel"
 
     def test_constructor_channels(self):
@@ -33,9 +29,6 @@ class TestConvolution:
         )
         assert layer.output_dim == channels[1], (
             f"Output channels should be 100. Got {layer.output_dim}."
-        )
-        assert layer.activation_function is None, (
-            f"Activation function should be None. Got {layer.activation_function}."
         )
 
     @pytest.mark.parametrize(
@@ -70,24 +63,6 @@ class TestConvolution:
             self.convolution_type(channels, (1, 1))
 
     @pytest.mark.parametrize(
-        "activation_function",
-        [
-            # Choosed random activation functions
-            LeakyRelu(),
-            Sigmoid(),
-            Tanh(),
-        ],
-    )
-    def test_activation_function(self, activation_function):
-        layer = self.convolution_type(
-            10, (1, 1), activation_function=activation_function
-        )
-
-        assert layer.activation_function == activation_function, (
-            f"Activation function should be {activation_function}. Got {layer.activation_function}."
-        )
-
-    @pytest.mark.parametrize(
         "initializer",
         [
             LeCunNormal(),
@@ -118,7 +93,7 @@ class TestConvolution:
         layer = self.convolution_type(channels, kernel_shape, initializer=LeCunNormal())
 
         data = op.zeros((3, 10, 200))
-        layer.forward(data)
+        layer(data)
 
         assert layer.input_dim == 3, (
             f"Input channels should be 3. Got {layer.input_dim}."
@@ -161,7 +136,7 @@ class TestConvolution:
         )
 
         data = Tensor(np.random.default_rng().random((channels[0], 100, 100)))
-        output = layer.forward(data)
+        output = layer(data)
 
         assert isinstance(output, Tensor), "Output should be a Tensor."
         assert output.shape == (1, channels[-1], 98, 98), (
@@ -185,7 +160,6 @@ class TestConvolution:
         layer = self.convolution_type(
             channels,
             kernel_shape,
-            activation_function=LeakyRelu(),
             initializer=LeCunNormal(),
             rng=0,
         )
@@ -198,10 +172,10 @@ class TestConvolution:
         )
 
         data = Tensor(np.random.default_rng().random((channels[0], 100, 100)))
-        output = layer.forward(data)
-        output2 = layer2.forward(data)
+        output = layer(data)
+        output2 = layer2(data)
 
-        assert LeakyRelu()(output2) == output, (
+        assert output2 == output, (
             "Output should be the activation function of the forward output."
         )
 
@@ -211,17 +185,17 @@ class TestConvolution:
         data = Tensor(np.random.default_rng().random((8, 10, 10)))
 
         with pytest.raises(ValueError):
-            layer.forward(data)
+            layer(data)
 
     def test_forward_dimensions_mismatch_induced(self):
         layer = self.convolution_type(10, (3, 3), initializer=LeCunNormal())
 
         data = Tensor(np.random.default_rng().random((10, 10, 10)))
 
-        layer.forward(data)
+        layer(data)
 
         with pytest.raises(ValueError):
-            layer.forward(Tensor(np.random.default_rng().random((10, 9, 10, 10))))
+            layer(Tensor(np.random.default_rng().random((10, 9, 10, 10))))
 
     def test_backwards(self):
         channels = (16, 8)
@@ -234,7 +208,7 @@ class TestConvolution:
         layer.requires_grad = True
 
         data = Tensor(np.random.default_rng().random((2, channels[0], 100, 100)))
-        output = layer.forward(data)
+        output = layer(data)
 
         output.backward()
 

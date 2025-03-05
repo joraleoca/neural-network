@@ -34,7 +34,7 @@ class Dropout(Layer):
         self.p = p
         self.rng = np.random.default_rng(rng)
 
-    def forward(self, data: Tensor[T]) -> Tensor[T]:
+    def __call__(self, data: Tensor[T]) -> Tensor[T]:
         if not data.requires_grad or self.p == 0:
             return data
 

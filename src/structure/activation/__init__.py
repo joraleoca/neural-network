@@ -9,8 +9,6 @@ from .sigmoid import Sigmoid
 from .tanh import Tanh
 from .softmax import Softmax
 
-from .utils import activation_from_name
-
 __all__ = (
     "ActivationFunction",
     "Relu",
@@ -18,5 +16,4 @@ __all__ = (
     "Sigmoid",
     "Tanh",
     "Softmax",
-    "activation_from_name"
 )

@@ -5,7 +5,6 @@ from numpy.random import Generator
 
 from .trainable import Trainable
 from src.core import Tensor, op
-from src.activation import ActivationFunction, activation_from_name
 from src.initialization import Initializer
 import src.constants as c
 
@@ -13,24 +12,16 @@ import src.constants as c
 class Dense(Trainable):
     """Dense layer in a neural network."""
 
-    __slots__ = [
-        "_in_features",
-        "_out_features",
-    ]
+    __slots__ = "_in_features", "_out_features"
 
     _in_features: int
     _out_features: int
 
-    required_fields: ClassVar[tuple[str, ...]] = (
-        c.WEIGHT_PREFIX,
-        c.BIAS_PREFIX,
-        c.ACTIVATION_PREFIX,
-    )
+    required_fields: ClassVar[tuple[str, ...]] = (c.WEIGHT_PREFIX, c.BIAS_PREFIX)
 
     def __init__(
         self,
         features: int | tuple[int, int],
-        activation_function: ActivationFunction | None = None,
         initializer: Initializer | None = None,
         *,
         rng: Generator | None = None,
@@ -41,13 +32,12 @@ class Dense(Trainable):
             features (int | tuple[int, int]):
                 If int, the number of nodes in the layer, the in features are inferred from the first call to forward.
                 If tuple, the number of (in features, out features)
-            activation_function (ActivationFunction | None): The activation function to be used by this layer.
             initializer (Initializer | None): The initializer for the weights of this layer. If None, the weights are not initialized.
             rng (Generator | None): A random number generator instance for initializing weights.
         Raises:
             ValueError: If any features is incorrect.
         """
-        super().__init__(activation_function, initializer, rng=rng)
+        super().__init__(initializer, rng=rng)
 
         if isinstance(features, int):
             if features <= 0:
@@ -76,17 +66,7 @@ class Dense(Trainable):
         self.biases = op.zeros((1, self._out_features))
         self._requires_grad = False
 
-    @property
-    def input_dim(self) -> int:
-        """Returns the number of input features of the layer."""
-        return self._in_features
-
-    @property
-    def output_dim(self) -> int:
-        """Returns the number of output features of the layer."""
-        return self._out_features
-
-    def forward(self, data: Tensor[np.floating]) -> Tensor[np.floating]:
+    def __call__(self, data: Tensor[np.floating]) -> Tensor[np.floating]:
         if self._in_features == -1:
             self._in_features = data.shape[-1]
         if not hasattr(self, "weights"):
@@ -97,12 +77,7 @@ class Dense(Trainable):
                 f"Data has {data.shape[-1]} features but the layer has {self._in_features} features."
             )
 
-        forward_output = (data @ self.weights) + self.biases
-
-        if self.activation_function:
-            forward_output = self.activation_function(forward_output)
-
-        return forward_output
+        return (data @ self.weights) + self.biases 
 
     def _initialize_weights(self) -> None:
         """Initializes the weights of the layer."""
@@ -125,11 +100,20 @@ class Dense(Trainable):
 
         self._initializer = None
 
+    @property
+    def input_dim(self) -> int:
+        """Returns the number of input features of the layer."""
+        return self._in_features
+
+    @property
+    def output_dim(self) -> int:
+        """Returns the number of output features of the layer."""
+        return self._out_features
+
     def data_to_store(self) -> dict[str, Any]:
         return {
             c.WEIGHT_PREFIX: self.weights or None,
             c.BIAS_PREFIX: self.biases or None,
-            c.ACTIVATION_PREFIX: self.activation_function.__class__.__name__ or None,
         }
 
     @staticmethod
@@ -142,8 +126,5 @@ class Dense(Trainable):
         layer._in_features = in_features
         layer.weights = Tensor(weights)
         layer.biases = Tensor(data[c.BIAS_PREFIX])
-        layer.activation_function = activation_from_name(
-            data[c.ACTIVATION_PREFIX].item()
-        )()
 
         return layer

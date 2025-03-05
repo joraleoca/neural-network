@@ -52,7 +52,7 @@ from src import NeuralNetwork, Config
 from src.core import Tensor
 from src.config import FeedForwardConfig, TrainingConfig
 from src.loss import CategoricalCrossentropy
-from src.activation import LeakyRelu, Softmax
+from src.structure import Dense, LeakyRelu, Softmax
 
 # Set the default device for all tensor operations, including those created internally by the neural network
 Config.set_default_device("cuda")
@@ -64,16 +64,20 @@ y_train = Tensor(...)  # Your training labels
 X_test = Tensor(...)  # Your testing data
 y_test = Tensor(...)  # Your testing labels
 
+classes = ("class1", "class2", "class3")
+
 config = FeedForwardConfig(
     network_structure=[
         Dense(X_train.shape[1]), 
+        LeakyRelu(),
         Dense(64),
+        LeakyRelu(),
         Dense(32),
-        Dense(16),
+        LeakyRelu(),
+        Dense(len(classes)),
+        Softmax(),
     ],
-    classes=("class1", "class2", "class3"),
-    hidden_activation=LeakyRelu(),
-    output_activation=Softmax(),
+    classes=classes,
 )
 
 # Initialize the neural network

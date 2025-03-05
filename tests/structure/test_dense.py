@@ -1,7 +1,6 @@
 import pytest
 
 from src.structure import Dense
-from src.activation import LeakyRelu, Sigmoid, Tanh
 from src.initialization import LeCunNormal, HeNormal
 from src.core import Tensor, op
 
@@ -15,9 +14,6 @@ class TestDense:
         assert layer.output_dim == 10, (
             f"Output features should be 10. Got {layer.output_dim}."
         )
-        assert layer.activation_function is None, (
-            f"Activation function should be None. Got {layer.activation_function}."
-        )
 
     def test_constructor_features(self):
         layer = self.dense_type((10, 100))
@@ -27,9 +23,6 @@ class TestDense:
         )
         assert layer.output_dim == 100, (
             f"Output features should be 100. Got {layer.output_dim}."
-        )
-        assert layer.activation_function is None, (
-            f"Activation function should be None. Got {layer.activation_function}."
         )
 
     @pytest.mark.parametrize(
@@ -64,22 +57,6 @@ class TestDense:
             self.dense_type(features)
 
     @pytest.mark.parametrize(
-        "activation_function",
-        [
-            # Choosed random activation functions
-            LeakyRelu(),
-            Sigmoid(),
-            Tanh(),
-        ],
-    )
-    def test_activation_function(self, activation_function):
-        layer = self.dense_type(10, activation_function=activation_function)
-
-        assert layer.activation_function == activation_function, (
-            f"Activation function should be {activation_function}. Got {layer.activation_function}."
-        )
-
-    @pytest.mark.parametrize(
         "initializer",
         [
             LeCunNormal(),
@@ -105,7 +82,7 @@ class TestDense:
     def test_induced_input_dim_and_weight_initializate(self):
         layer = self.dense_type(10, initializer=LeCunNormal())
 
-        layer.forward(Tensor([[1, 2, 3]]))
+        layer(Tensor([[1, 2, 3]]))
 
         assert layer.input_dim == 3, (
             f"Input features should be 3. Got {layer.input_dim}."
@@ -135,7 +112,7 @@ class TestDense:
         layer = self.dense_type(10, initializer=LeCunNormal())
 
         data = Tensor([[1, 2, 3]])
-        output = layer.forward(data)
+        output = layer(data)
 
         assert isinstance(output, Tensor), "Output should be a Tensor."
         assert output.shape == (1, 10), (
@@ -154,16 +131,13 @@ class TestDense:
         )
 
     def test_forward_activation_function(self):
-        layer = self.dense_type(
-            10, activation_function=LeakyRelu(), initializer=LeCunNormal()
-        )
+        layer = self.dense_type(10, initializer=LeCunNormal())
 
         data = Tensor([[1, 2, 3]])
-        output = layer.forward(data)
+        output = layer(data)
 
-        assert output == layer.activation_function(
-            (data @ layer.weights) + layer.biases
-        ), "Output should be the activation function of the forward output."
+        assert output == (data @ layer.weights) + layer.biases, \
+            "Output should be the activation function of the forward output."
 
     def test_forward_dimensions_mismatch(self):
         layer = self.dense_type((10, 10), initializer=LeCunNormal())
@@ -171,17 +145,17 @@ class TestDense:
         data = Tensor([[1, 2, 3, 4]])
 
         with pytest.raises(ValueError):
-            layer.forward(data)
+            layer(data)
 
     def test_forward_dimensions_mismatch_induced(self):
         layer = self.dense_type(10, initializer=LeCunNormal())
 
         data = Tensor([[1, 2, 3, 4]])
 
-        layer.forward(data)
+        layer(data)
 
         with pytest.raises(ValueError):
-            layer.forward(Tensor([[1, 2, 3, 4, 5, 6]]))
+            layer(Tensor([[1, 2, 3, 4, 5, 6]]))
 
     def test_backwards(self):
         layer = self.dense_type(10, initializer=LeCunNormal())
@@ -189,7 +163,7 @@ class TestDense:
         layer.requires_grad = True
 
         data = Tensor([[1, 2, 3]])
-        output = layer.forward(data)
+        output = layer(data)
 
         output.backward()
 
