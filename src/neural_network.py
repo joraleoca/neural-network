@@ -1,6 +1,7 @@
 from copy import deepcopy
 from pathlib import Path
 from typing import Iterable
+from itertools import chain
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -12,7 +13,6 @@ from .core import (
     op,
 )
 from .structure import Layer, Trainable, Convolution
-from .loss import CategoricalCrossentropy
 from .encode import Encoder
 
 
@@ -44,29 +44,16 @@ class NeuralNetwork:
         if config.encoder:
             self.encoder = config.encoder(self.classes)
 
-        self._trainable_layers = [
-            layer for layer in self.layers if isinstance(layer, Trainable)
-        ]
+        self._trainable_layers = [layer for layer in self.layers if isinstance(layer, Trainable)]
 
-    @property
-    def num_hidden_layers(self) -> int:
+    def parameters(self) -> list[Tensor[np.floating]]:
         """
-        Returns the number of hidden layers in the neural network.
+        Returns the parameters of the neural network.
 
         Returns:
-            int: The number of hidden layers in the neural network.
+            list[Tensor]: The parameters of the neural network.
         """
-        return len(self.layers) - 2
-
-    @property
-    def params(self) -> list[tuple[Tensor[np.floating], Tensor[np.floating]]]:
-        """
-        Returns the weights and biases of the neural network for layers.
-
-        Returns:
-            list[tuple[Tensor, Tensor]]: The weights and biases of the neural network.
-        """
-        return [(layer.weights, layer.biases) for layer in self._trainable_layers]
+        return list(chain.from_iterable((layer.weights, layer.biases) for layer in self._trainable_layers))
 
     def forward_pass(self, input: Tensor[np.floating] | ArrayLike) -> Tensor[np.floating]:
         """
@@ -97,9 +84,8 @@ class NeuralNetwork:
 
         for layer in self.layers:
             last_output = layer(last_output)
-            
+
         return last_output
-    
 
     def _prepare_data_for_training(
         self, data: Iterable[Tensor | ArrayLike], expected: Iterable[str]
@@ -129,9 +115,7 @@ class NeuralNetwork:
 
         return data_, out_expected
 
-    def _batch_data(
-        self, data: list[Tensor], expected: list[Tensor], batch_size: int
-    ) -> list[tuple[Tensor, Tensor]]:
+    def _batch_data(self, data: list[Tensor], expected: list[Tensor], batch_size: int) -> list[tuple[Tensor, Tensor]]:
         """
         Batch the data for training.
 
@@ -164,7 +148,6 @@ class NeuralNetwork:
 
         return out
 
-
     def train(
         self,
         data_train: Iterable[Tensor | ArrayLike],
@@ -194,12 +177,8 @@ class NeuralNetwork:
         if not hasattr(self, "encoder") or not isinstance(self.encoder, encoder_class):
             self.encoder = encoder_class(self.classes)
 
-
         data_train, expected_train_encoded = self._prepare_data_for_training(data_train, expected_train)
         data_evaluate, _ = self._prepare_data_for_training(data_evaluate, expected_evaluate)
-
-        for layer in self._trainable_layers:
-            layer.requires_grad = True
 
         last_epoch_loss = float("inf")
         patience_counter = 0
@@ -233,23 +212,14 @@ class NeuralNetwork:
                 print(f"Early stopping at epoch {epoch} due to no improvement in loss.")
                 break
 
-            config.lr.update(epoch)
-
             if config.debug:
                 # Store metrics for plotting
                 metrics["losses"].append(current_epoch_loss)
                 metrics["test_acc"].append(val_accuracy)
-                print(
-                    f"Epoch {epoch}, "
-                    f"Accuracy: {val_accuracy:.4f}, "
-                    f"Loss: {current_epoch_loss:.4f}, "
-                )
+                print(f"Epoch {epoch}, Accuracy: {val_accuracy:.4f}, Loss: {current_epoch_loss:.4f}, ")
 
         self.layers = best_layers
         self._trainable_layers = best_trainable_layers
-
-        for layer in self._trainable_layers:
-            layer.requires_grad = False
 
         if config.store:
             self.store_params()
@@ -272,26 +242,24 @@ class NeuralNetwork:
         """
         losses: list[float] = []
 
-        for data, expected in batches:
-            predicted = self._forward_pass(data)
+        for layer in self._trainable_layers:
+            layer.requires_grad = True
 
-            if isinstance(config.loss, CategoricalCrossentropy):
-                # This approach is used because the current autograd implementation does not support
-                # the computation of the Jacobian matrix, which is necessary for calculating the gradient.
-                # TODO: Implement the Jacobian matrix in the autograd system and remove this workaround.
-                batch_loss = op.cce(predicted, expected)
-            else:
-                batch_loss = config.loss(expected, predicted)
+        for data, expected in batches:
+            batch_loss = config.loss(expected, self._forward_pass(data))
 
             losses.extend(loss.item() for loss in batch_loss)
 
             batch_loss.backward()
 
-            config.optimizer(config.lr.learning_rate, layers=self._trainable_layers)
+            config.optimizer.step()
 
             for layer in self._trainable_layers:
-                layer.clear_params_grad()
-        
+                layer.zero_grad()
+
+        for layer in self._trainable_layers:
+            layer.requires_grad = False
+
         return losses
 
     def evaluate(self, data: Iterable[Tensor], expected: Iterable[str]) -> float:

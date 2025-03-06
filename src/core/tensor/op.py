@@ -49,7 +49,7 @@ def zeros(
     dtype: DTypeLike = None,
     *,
     requires_grad: bool = False,
-) -> Tensor[T]:
+) -> Tensor:
     """
     Create a tensor filled with zeros.
     Args:

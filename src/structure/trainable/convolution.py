@@ -63,9 +63,7 @@ class Convolution(Trainable):
         if padding < 0:
             raise ValueError(f"The padding value must be non-negative. Got {padding}")
         if len(kernel_shape) != 2:
-            raise ValueError(
-                f"The kernel size must have 2 dimension. Got {len(kernel_shape)}"
-            )
+            raise ValueError(f"The kernel size must have 2 dimension. Got {len(kernel_shape)}")
 
         super().__init__(initializer, rng=rng)
         self.kernel_shape = kernel_shape
@@ -85,10 +83,15 @@ class Convolution(Trainable):
         else:
             self._out_channels = channels
 
-        if self._out_channels <= 0:
-            raise ValueError(
-                f"The out channels must be positive. Got {self._out_channels}"
+            if self._out_channels <= 0:
+                raise ValueError(f"The out channels must be positive. Got {self._out_channels}")
+
+        self.biases.set_data(
+            op.zeros(
+                (self._out_channels, 1, 1),
+                requires_grad=self.requires_grad,
             )
+        )
 
     def __call__(
         self,
@@ -97,36 +100,25 @@ class Convolution(Trainable):
         """
         Apply a convolution operation to the input data.
         Args:
-            data (Tensor[np.floating]): A 3D numpy array with shape (channels, height, width) representing the input data.
+            data (Tensor[np.floating]): A 4D numpy array with shape (batch size, channels, height, width) representing the input data.
         Returns:
-            Tensor[np.floating]: A 3D numpy array with shape (_out_channels, output_height, output_width) representing the convolved output.
+            Tensor[np.floating]: A 4D numpy array with shape (batch size, out_channels, output_height, output_width) representing the convolved output.
         Raises:
             ValueError:
-                If the input data does not have 3 dimensions.
+                If the input data does not have 4 dimensions.
                 If the number of input channels does not match the expected number of input channels.
         """
-        if data.ndim != 4:
-            if data.ndim == 3:
-                data = op.expand_dims(data, 0) #type: ignore
-            else:
-                raise ValueError(
-                    f"Expected 4D input (batch, channels, height, width). Got {data.shape}"
-                )
-        
-        if not hasattr(self, "weights"):
-            self._in_channels = data.shape[1]
-            self._initializate_weights() 
+        if data.ndim == 3:
+            data = op.expand_dims(data, 0)  # type: ignore
+        elif data.ndim != 4:
+            raise ValueError(f"Expected 4D input (batch, channels, height, width). Got {data.shape}")
 
-        if not hasattr(self, "biases"):
-            self.biases = op.zeros(
-                (self._out_channels, 1, 1),
-                requires_grad=self.requires_grad,
-            )
+        if self._initializer is not None:
+            self._in_channels = data.shape[1]
+            self._initializate_weights()
 
         if data.shape[1] != self._in_channels:
-            raise ValueError(
-                f"The input must have {self._in_channels} channels. Got {data.shape[1]}"
-            )
+            raise ValueError(f"The input must have {self._in_channels} channels. Got {data.shape[1]}")
 
         pad_width = (
             (0, 0),
@@ -150,7 +142,7 @@ class Convolution(Trainable):
         kernel_height, kernel_width = self.kernel_shape
 
         out_height = 1 + ((in_height - kernel_height) // self.stride)
-        out_width = 1 + ((in_width - kernel_width) // self.stride) 
+        out_width = 1 + ((in_width - kernel_width) // self.stride)
 
         window_shape = (
             batch_size,
@@ -160,7 +152,7 @@ class Convolution(Trainable):
             in_channels,
             kernel_height,
             kernel_width,
-        )   
+        )
 
         window_strides = (
             data.strides[0],
@@ -171,31 +163,22 @@ class Convolution(Trainable):
             data.strides[2],
             data.strides[3],
         )
-        
-        return op.as_strided(
-            data, 
-            shape=window_shape, 
-            strides=window_strides
-        )
+
+        return op.as_strided(data, shape=window_shape, strides=window_strides)
 
     def _initializate_weights(self) -> None:
         """Initializes the weights of the layer."""
-        assert self.requires_grad is not None, (
-            "Requires grad cannot be None when initializing weights."
-        )
+        assert self._initializer is not None, "Initializer cannot be None when initializing weights."
 
-        assert self._initializer is not None, (
-            "Initializer cannot be None when initializing weights."
-        )
-
-        self.weights = self._initializer.initialize(
-            (self._out_channels, 1, 1, self._in_channels) + self.kernel_shape,
-            requires_grad=self.requires_grad,
-            rng=self.rng,
+        self.weights.set_data(
+            self._initializer.initialize(
+                (self._out_channels, 1, 1, self._in_channels) + self.kernel_shape,
+                requires_grad=self.requires_grad,
+                rng=self.rng,
+            )
         )
 
         self._initializer = None
-
 
     @property
     def input_dim(self) -> int:

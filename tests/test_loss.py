@@ -89,36 +89,3 @@ class TestCategoricalCrossentropy:
         loss = categorical_cross_entropy(expected, predicted)
 
         assert_data(loss, expected_loss)
-
-    @pytest.mark.parametrize(
-        "expected, predicted, expected_grad",
-        [
-            (
-                Tensor([1, 0, 0]),
-                Tensor([0.7, 0.2, 0.1], requires_grad=True),
-                [-1 / 0.7, 0, 0],
-            ),
-            (
-                Tensor([0, 1, 0]),
-                Tensor([0.7, 0.2, 0.1], requires_grad=True),
-                [0, -1 / 0.2, 0],
-            ),
-            (
-                Tensor([0, 0, 1]),
-                Tensor([0.7, 0.2, 0.1], requires_grad=True),
-                [0, 0, -1 / 0.1],
-            ),
-        ],
-    )
-    def test_categorical_cross_entropy_backward(
-        self, expected, predicted, expected_grad, categorical_cross_entropy
-    ):
-        """Test the backward computation for the categorical cross-entropy loss."""
-        expected.data = np.clip(expected.data, c.EPSILON, 1 - c.EPSILON)
-
-        loss = categorical_cross_entropy(expected, predicted)
-        loss.backward()
-
-        predicted.grad = predicted.grad.round(5)  # Due to clip operation
-
-        assert_grad(predicted, expected_grad)

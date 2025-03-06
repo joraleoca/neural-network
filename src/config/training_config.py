@@ -1,8 +1,7 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
-from src.scheduler import Scheduler, FactorScheduler
-from src.optimizer import Optimizer, SGD
+from src.optimizer import Optimizer
 from src.loss import Loss
 
 
@@ -12,7 +11,6 @@ class TrainingConfig:
     TrainingConfig class for configuring the training parameters of a neural network.
     Attributes:
         loss (Loss): Loss function.
-        lr (Scheduler): Learning rate scheduler.
         epochs (int): Number of training epochs.
         patience_stop (int): Patience for early stopping, 0 is no stop.
         min_delta (float): Minimum change in loss to be considered an improvement.
@@ -23,14 +21,12 @@ class TrainingConfig:
     """
 
     loss: Loss
-
-    lr: Scheduler = field(default_factory=FactorScheduler)
+    optimizer: Optimizer
 
     epochs: int = 10_000
     patience_stop: int = 10  # Early stopping patience
     min_delta: float = 1e-4  # Minimum change in loss to be considered an improvement
 
-    optimizer: Optimizer = field(default_factory=SGD)
     batch_size: int = 1
 
     debug: bool = False
@@ -38,23 +34,11 @@ class TrainingConfig:
 
     def __post_init__(self):
         """Validate initialization parameters."""
-        if not isinstance(self.lr, Scheduler):
-            raise TypeError(
-                "The learning rate must be an instance of Scheduler. Default scheduler is FactorScheduler with a factor of 1."
-            )
-
         if self.epochs <= 0:
-            raise ValueError("Epochs must be greater than 0")
-
+            raise ValueError(f"Epochs must be greater than 0. Got {self.epochs}.")
         if self.patience_stop < 0:
-            raise ValueError(
-                f"The patience to stop must be non negative. Got {self.patience_stop}."
-            )
-
+            raise ValueError(f"The patience to stop must be non negative. Got {self.patience_stop}.")
         if self.min_delta <= 0:
-            raise ValueError("Min delta must be greater than 0")
-
+            raise ValueError(f"Min delta must be greater than 0. Got {self.min_delta}")
         if self.batch_size < 1:
-            raise ValueError(
-                f"The batch size must be positive number. Got {self.batch_size}"
-            )
+            raise ValueError(f"The batch size must be positive. Got {self.batch_size}")

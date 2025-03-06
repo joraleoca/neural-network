@@ -48,7 +48,7 @@ class TestActivation:
 
         assert_grad(data, expected_grad_input)
 
-        data.clear_grad()
+        data.zero_grad()
 
     @pytest.mark.parametrize("alpha", [-0.01, 0, -1.0])
     def test_leaky_relu_invalid_alpha(self, alpha):

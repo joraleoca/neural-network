@@ -1,20 +1,19 @@
-from collections.abc import MutableSequence
-from typing import SupportsIndex, TypeVar, Any
 from collections import deque
+from collections.abc import MutableSequence
 from graphlib import TopologicalSorter
+from typing import Any, SupportsIndex, TypeVar
 
 import cupy as cp
 import numpy as np
-from numpy.typing import NDArray, ArrayLike, DTypeLike
+from numpy.typing import ArrayLike, DTypeLike, NDArray
 
 from ..config import Config
-from .device import Device
 from .autograd import (
     Function,
-    operations as op,
     functions as func,
+    operations as op,
 )
-
+from .device import Device
 
 T = TypeVar("T", bound=cp.generic)
 
@@ -57,30 +56,11 @@ class Tensor(MutableSequence[T]):
                     - "cuda"   : Create the tensor on the GPU (raises an error if not available).
                     - "auto"   : Automatically choose the GPU if available, otherwise use the CPU.
         """
-        if device is None:
-            device = Config.default_device
-
-        if device == Device.CUDA and not cp.cuda.is_available():
-            raise ValueError("Cannot create tensor on 'cuda', GPU is not available.")
-
-        match device:
-            case Device.CPU:
-                if isinstance(data, np.ndarray):
-                    self.data = data if dtype is None else data.astype(dtype)
-                else:
-                    self.data = np.array(data, dtype=dtype or Config.default_dtype)
-            case Device.CUDA:
-                if isinstance(data, cp.ndarray):
-                    self.data = data if dtype is None else data.astype(dtype)   #type: ignore
-                else:
-                    self.data = cp.array(data, dtype=dtype or Config.default_dtype)
-            case _:
-                raise ValueError(f"Unknown device {device}")
-
+        self._device = Device(device or Config.default_device)
+        self.set_data(data, dtype=dtype or Config.default_dtype)
         self._requires_grad = requires_grad
         self._grad_operation = None
         self.grad = None
-        self._device = Device(device)
 
     """Magic methods"""
 
@@ -92,9 +72,7 @@ class Tensor(MutableSequence[T]):
 
     def __setitem__(self, idx, value) -> None:
         if self.requires_grad:
-            raise ValueError(
-                "Tensor can only be modified in-place when it doesn't require grad"
-            )
+            raise ValueError("Tensor can only be modified in-place when it doesn't require grad")
 
         self.data[idx] = value
 
@@ -109,7 +87,7 @@ class Tensor(MutableSequence[T]):
             data = self.data
         else:
             data = cp.ndarray.get(self.data)
- 
+
         return data.astype(dtype)
 
     def __neg__(self) -> "Tensor[T]":
@@ -246,18 +224,14 @@ class Tensor(MutableSequence[T]):
         return self.data.__contains__(value)
 
     def __round__(self, decimals: int = 0) -> "Tensor[T]":
-        return self.apply_operation(
-            inplace=False, operation=func.Round(self, decimals=decimals)
-        )
+        return self.apply_operation(inplace=False, operation=func.Round(self, decimals=decimals))
 
     def __index__(self) -> int:
-        return self.data.__index__()    #type: ignore
+        return self.data.__index__()  # type: ignore
 
     def __copy__(self):
         """Return a shallow copy of this tensor."""
-        return Tensor(
-            self.data.copy(), dtype=self.dtype, requires_grad=self.requires_grad
-        )
+        return Tensor(self.data.copy(), dtype=self.dtype, requires_grad=self.requires_grad)
 
     def copy(self) -> "Tensor[T]":
         """Return a shallow copy of this tensor."""
@@ -289,7 +263,7 @@ class Tensor(MutableSequence[T]):
     def size(self) -> int:
         """Returns the number of elements in the tensor."""
         return self.data.size
-    
+
     @property
     def strides(self) -> tuple[int, ...]:
         """Returns the strides of the tensor."""
@@ -304,11 +278,6 @@ class Tensor(MutableSequence[T]):
 
     @requires_grad.setter
     def requires_grad(self, requires_grad: bool) -> None:
-        if self._requires_grad == requires_grad:
-            return
-
-        self.grad = None
-        self._grad_operation = None
         self._requires_grad = requires_grad
 
     @property
@@ -320,13 +289,37 @@ class Tensor(MutableSequence[T]):
 
     """Utils"""
 
+    def set_data(self, data: ArrayLike, *, dtype: DTypeLike = None) -> None:
+        """
+        Sets the data of the tensor.
+
+        Args:
+            data (ArrayLike): The new data for the tensor.
+            dtype (DTypeLike): The desired data type for the tensor.
+                If not provided, the data type will be inferred if it is an NDArray; otherwise, the self data type will be used.
+        """
+        device = self.device
+        dtype = dtype or self.dtype
+
+        match device:
+            case Device.CPU:
+                if isinstance(data, np.ndarray):
+                    self.data = data if data.dtype == dtype else data.astype(dtype)
+                else:
+                    self.data = np.array(data, dtype=dtype)
+            case Device.CUDA:
+                if isinstance(data, cp.ndarray):
+                    self.data = data if data.dtype == dtype else data.astype(dtype)  # type: ignore
+                else:
+                    self.data = cp.array(data, dtype=dtype)
+            case _:
+                raise ValueError(f"Unknown device {device}")
+
     def item(self) -> T:
         """Returns the value of the tensor as a standard Python scalar."""
         return self.data.item()
 
-    def sum(
-        self, axis: tuple[int, ...] | int | None = None, keepdims: bool = False
-    ) -> "Tensor[T] | T":
+    def sum(self, axis: tuple[int, ...] | int | None = None, keepdims: bool = False) -> "Tensor[T] | T":
         """
         Computes the sum of tensor elements over the specified axis.
 
@@ -339,13 +332,9 @@ class Tensor(MutableSequence[T]):
             Tensor[T] | T:
                 A tensor with the sum of elements along the specified axis. If no axis is specified, returns the sum of all elements as a scalar.
         """
-        return self.apply_operation(
-            operation=func.Sum(self, axis=axis, keepdims=keepdims)
-        )
+        return self.apply_operation(operation=func.Sum(self, axis=axis, keepdims=keepdims))
 
-    def max(
-        self, axis: SupportsIndex | None = None, keepdims: bool = False
-    ) -> "Tensor[T] | T":
+    def max(self, axis: SupportsIndex | None = None, keepdims: bool = False) -> "Tensor[T] | T":
         """
         Computes the maximum value of tensor elements over the specified axis.
 
@@ -360,13 +349,9 @@ class Tensor(MutableSequence[T]):
                 A tensor with the maximum value of elements along the specified axis.
                 If no axis is specified, returns the maximum element as a scalar.
         """
-        return self.apply_operation(
-            operation=func.Max(self, axis=axis, keepdims=keepdims)
-        )
+        return self.apply_operation(operation=func.Max(self, axis=axis, keepdims=keepdims))
 
-    def min(
-        self, axis: SupportsIndex | None = None, keepdims: bool = False
-    ) -> "Tensor[T] | T":
+    def min(self, axis: SupportsIndex | None = None, keepdims: bool = False) -> "Tensor[T] | T":
         """
         Computes the minimum value of tensor elements over the specified axis.
 
@@ -381,9 +366,7 @@ class Tensor(MutableSequence[T]):
                 A tensor with the minimum value of elements along the specified axis.
                 If no axis is specified, returns the minimum element as a scalar.
         """
-        return self.apply_operation(
-            operation=func.Min(self, axis=axis, keepdims=keepdims)
-        )
+        return self.apply_operation(operation=func.Min(self, axis=axis, keepdims=keepdims))
 
     def mean(self, axis: int | tuple[int, ...] | None = None) -> "Tensor[T] | T":
         """
@@ -399,8 +382,10 @@ class Tensor(MutableSequence[T]):
                 If no axis is specified, returns the mean element as a scalar.
         """
         return self.apply_operation(operation=func.Mean(self, axis=axis))
-    
-    def argmax(self, *, axis: SupportsIndex | None = None, dtype: DTypeLike, out: None = None, keepdims: bool = False) -> "Tensor[T]":
+
+    def argmax(
+        self, *, axis: SupportsIndex | None = None, dtype: DTypeLike, out: None = None, keepdims: bool = False
+    ) -> "Tensor[T]":
         """
         Returns the indices of the maximum values along an axis.
 
@@ -443,9 +428,7 @@ class Tensor(MutableSequence[T]):
 
     """Autograd"""
 
-    def apply_operation(
-        self, operation: Function, inplace: bool = False
-    ) -> "Tensor[T]":
+    def apply_operation(self, operation: Function, inplace: bool = False) -> "Tensor[T]":
         """
         Applies a specified operation between the current tensor and another tensor.
 
@@ -456,9 +439,7 @@ class Tensor(MutableSequence[T]):
             Tensor: The result of the operation, either a new tensor or the modified current tensor.
         """
         if inplace and self._requires_grad:
-            raise ValueError(
-                "Inplace operations are not supported for tensors with gradient tracking."
-            )
+            raise ValueError("Inplace operations are not supported for tensors with gradient tracking.")
 
         result = operation(inplace=inplace)
 
@@ -478,7 +459,7 @@ class Tensor(MutableSequence[T]):
 
         if self.grad is None:
             xp = cp.get_array_module(self.data)
-            
+
             if self.data.dtype.kind == "f":
                 dtype_ = xp.dtype(self.data.dtype)
             elif Config.default_dtype.kind == "f":
@@ -486,7 +467,7 @@ class Tensor(MutableSequence[T]):
             else:
                 dtype_ = np.float32
 
-            self.grad = xp.ones_like(self.data, dtype=dtype_)   #type: ignore
+            self.grad = xp.ones_like(self.data, dtype=dtype_)  # type: ignore
 
         graph = self._grad_graph()
 
@@ -523,10 +504,8 @@ class Tensor(MutableSequence[T]):
 
         return graph
 
-    def clear_grad(self) -> None:
-        """
-        Clears the gradient stored in the tensor.
-        """
+    def zero_grad(self) -> None:
+        """Clears the gradient of the tensor."""
         if self._requires_grad and self.grad is not None and self.grad.size != 1:
             self.grad.fill(0)
         else:

@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from src.structure import Trainable
-from src.core import Tensor
 from src.constants import EPSILON
+from src.core import Tensor
+from src.scheduler import Scheduler
 
 
 class Optimizer(ABC):
@@ -12,70 +12,56 @@ class Optimizer(ABC):
     Abstract base class for neural network optimizers.
     """
 
+    __slots__ = "lr", "_params"
+
+    lr: Scheduler | float
+    _params: list[Tensor]
+
     MAX_DELTA_NORM: float = 5.0
 
-    def __call__(self, lr: float, *, layers: list[Trainable]):
+    def __init__(self, params: list[Tensor], lr: Scheduler | float) -> None:
+        """
+        Initialize the optimizer.
+
+        Args:
+            params (list[Tensor]): Parameters to optimize.
+            lr (Scheduler | float): Learning rate or learning rate scheduler.
+        """
+        self.lr = lr
+        self._params = params
+
+    def step(self):
         """
         Optimizes the parameters of the given layers.
 
         Args:
             lr (float): Learning rate.
-            layers (list[Trainable]): Trainable layers to optimize.
         """
-
-        weights, biases = list(), list()
-        weights_grad, biases_grad = list(), list()
-
-        for layer in layers:
-            weights.append(layer.weights)
-            biases.append(layer.biases)
-
-            weights_grad.append(layer.weights_grad)
-            biases_grad.append(layer.biases_grad)
+        for param in self._params:
+            if param.grad is None:
+                raise ValueError("Gradients are required for optimization.")
 
         # Gradient normalization
-        global_norm = np.sqrt(
-            sum(np.linalg.norm(d) ** 2 for d in weights_grad) +
-            sum(np.linalg.norm(d) ** 2 for d in biases_grad)
-        )
+        global_norm = np.sqrt(sum(np.linalg.norm(d.grad) ** 2 for d in self._params))  # type: ignore
         if global_norm > self.MAX_DELTA_NORM:
             clip_factor = self.MAX_DELTA_NORM / (global_norm + EPSILON)
-            
-            for i in range(len(weights_grad)):
-                weights_grad[i] *= clip_factor
-                biases_grad[i] *= clip_factor
 
-        self._optimize_weights(lr, weights, weights_grad)
-        self._optimize_biases(lr, biases, biases_grad)
+            for param in self._params:
+                param.grad *= clip_factor
+
+        if isinstance(self.lr, Scheduler):
+            self._optimize(self.lr.step())
+        else:
+            self._optimize(self.lr)
 
     @abstractmethod
-    def _optimize_weights(
+    def _optimize(
         self,
         lr: float,
-        weights: list[Tensor],
-        gradients: list[Tensor],
     ) -> None:
         """
-        Optimizes the weights of the given layers.
+        Optimizes the parameters.
         Args:
             lr: learning rate.
-            weights (list[Tensor[np.floating]]): Weights.
-            gradients (list[Tensor[np.floating]]): Gradients.
         """
-        pass
-
-    @abstractmethod
-    def _optimize_biases(
-        self,
-        lr: float,
-        biases: list[Tensor],
-        gradients: list[Tensor],
-    ) -> None:
-        """
-        Optimizes the biases of the given layers.
-        Args:
-            lr (float): learning rate.
-            biases (list[Tensor[np.floating]]): Biases.
-            gradients (list[Tensor[np.floating]]): Gradients.
-        """
-        pass
+        raise NotImplementedError("Optimizer is an abstract class and should not be instantiated directly.")

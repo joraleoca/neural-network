@@ -1,4 +1,4 @@
-from src.structure import Layer, Trainable, ActivationFunction
+from src.structure import Layer, Trainable
 from src.initialization import Initializer, HeUniform
 from src.encode import Encoder
 from src.loader import Loader

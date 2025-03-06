@@ -212,4 +212,11 @@ class TestConvolution:
 
         output.backward()
 
-        assert layer.weights_grad.shape == layer.weights.shape
+        assert layer.weights.grad is not None, "Weights should have gradients."
+        assert layer.biases.grad is not None, "Biases should have gradients."
+        assert layer.weights.grad.shape == layer.weights.shape, (
+            f"Weights gradients shape should be {layer.weights.shape}. Got {layer.weights.grad.shape}."
+        )
+        assert layer.biases.grad.shape == layer.biases.shape, (
+            f"Biases gradients shape should be {layer.biases.shape}. Got {layer.biases.grad.shape}."
+        )
