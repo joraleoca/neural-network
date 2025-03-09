@@ -1,8 +1,6 @@
 from typing import SupportsIndex
 from copy import deepcopy
 
-import cupy as cp
-
 from ..function import Function
 from ... import tensor
 
@@ -25,9 +23,9 @@ class Argmax(Function):
             raise ValueError("Inplace argmax is not supported.")
 
         a = self.args[0]
-        
+
         return self._create_output_tensor(
-            a.data.argmax(axis=self.axis, keepdims=self.keepdims) # type: ignore Already checked in the constructor
+            a.data.argmax(axis=self.axis, keepdims=self.keepdims)  # type: ignore Already checked in the constructor
         )
 
     def backward(self) -> None:

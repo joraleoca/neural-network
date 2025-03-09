@@ -4,7 +4,7 @@ import numpy as np
 from numpy.random import Generator
 
 from ..layer import Layer
-from src.core import Tensor, T
+from src.tensor import Tensor, T
 
 
 class Dropout(Layer):

@@ -21,7 +21,7 @@ class Index(Function):
 
         a = self.args[0]
 
-        return self._create_output_tensor(a.data[self.idx])
+        return self._create_output_tensor(a.data[self.idx], a.dtype)
 
     def backward(self) -> None:
         a = self.args[0]

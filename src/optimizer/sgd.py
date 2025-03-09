@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.core import Tensor
+from src.tensor import Tensor
 from src.scheduler import Scheduler
 
 from .optimizer import Optimizer
@@ -64,9 +64,7 @@ class SGD(Optimizer):
             self._last_gradient = grads
 
         for i, param in enumerate(self._params):
-            param.requires_grad = False
             if self.weight_decay > 0:
                 param *= 1 - self.weight_decay
 
             param -= lr * grads[i]
-            param.requires_grad = True

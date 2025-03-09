@@ -1,11 +1,10 @@
 from typing import ClassVar, Any
 
 import numpy as np
-from numpy.random import Generator
 
 from .trainable import Trainable
-from src.core import Tensor, op
-from src.initialization import Initializer
+from src.tensor import Tensor, op
+from src.initialization import Initializer, HeUniform
 import src.constants as c
 
 
@@ -39,11 +38,11 @@ class Convolution(Trainable):
         self,
         channels: int | tuple[int, int],
         kernel_shape: tuple[int, int],
-        initializer: Initializer | None = None,
+        initializer: Initializer = HeUniform(),
         *,
         stride: int = 1,
         padding: int = 0,
-        rng: Generator | None = None,
+        rng: Any = None,
     ) -> None:
         """
         Initializes a new convolution layer in the neural network.
@@ -56,7 +55,7 @@ class Convolution(Trainable):
             initializer (Initializer): The initializer for the weights of this layer.
             stride (int): The stride of the convolution operation.
             padding (int): The padding of the convolution operation.
-            rng (Generator | None): A random number generator instance for initializing weights.
+            rng (Any): A random number generator instance for initializing weights.
         """
         if stride <= 0:
             raise ValueError(f"The stride value must be positive. Got {stride}")
@@ -78,8 +77,7 @@ class Convolution(Trainable):
                     f"The channels must be positive. Got in: {self._in_channels}, out: {self._out_channels}"
                 )
 
-            if self._initializer is not None:
-                self._initializate_weights()
+            self._initializate_weights()
         else:
             self._out_channels = channels
 
@@ -108,9 +106,7 @@ class Convolution(Trainable):
                 If the input data does not have 4 dimensions.
                 If the number of input channels does not match the expected number of input channels.
         """
-        if data.ndim == 3:
-            data = op.expand_dims(data, 0)  # type: ignore
-        elif data.ndim != 4:
+        if data.ndim != 4:
             raise ValueError(f"Expected 4D input (batch, channels, height, width). Got {data.shape}")
 
         if self._initializer is not None:

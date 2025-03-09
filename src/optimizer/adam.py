@@ -1,7 +1,7 @@
 import numpy as np
 
 import src.constants as c
-from src.core import Tensor, op
+from src.tensor import Tensor, op
 from src.scheduler import Scheduler
 
 from .optimizer import Optimizer
@@ -49,6 +49,4 @@ class Adam(Optimizer):
         lr *= np.sqrt(1 - self.b2**self._t) / (1 - self.b1**self._t)
 
         for param, m, v in zip(self._params, self._m, self._v):
-            param.requires_grad = False
             param -= lr * m / (np.sqrt(v) + c.EPSILON)
-            param.requires_grad = True

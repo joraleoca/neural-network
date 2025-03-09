@@ -5,7 +5,7 @@ from numpy import generic as np_generic
 from numpy.typing import NDArray
 
 from ..layer import Layer
-from src.core import Tensor, op
+from src.tensor import Tensor, op
 
 
 class Pool(Layer, ABC):

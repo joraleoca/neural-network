@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 
 from .pool import Pool
-from src.core import Tensor, op
+from src.tensor import Tensor, op
 from src.constants import EPSILON
 
 

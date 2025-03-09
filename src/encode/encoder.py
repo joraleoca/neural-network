@@ -1,21 +1,23 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+
 class Encoder[T, encode_type](ABC):
     """
     Encoder is an abstract base class that defines the structure for encoding labels into a specific format.
     """
-    __slots__ = ["classes"]
 
-    classes: tuple[T, ...]
+    __slots__ = ["labels"]
 
-    def __init__(self, classes: tuple[T, ...]) -> None:
+    labels: tuple[T, ...]
+
+    def __init__(self, labels: tuple[T, ...]) -> None:
         """
-        Initializes the encoder with the given classes.
+        Initializes the encoder with the given labels.
         Args:
-            classes (tuple[T, ...]): A tuple containing the class labels.
+            labels (tuple[T, ...]): A tuple containing the class labels.
         """
-        self.classes = classes
+        self.labels = labels
 
     def __call__(self, label: T) -> encode_type:
         """

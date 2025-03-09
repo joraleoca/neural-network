@@ -3,7 +3,7 @@ from typing import ClassVar, Any
 
 import numpy as np
 
-from src.core import Tensor
+from src.tensor import Tensor
 
 class Layer(ABC):
     """Abstract class for a layer in a neural network."""

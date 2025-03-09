@@ -1,11 +1,10 @@
 from typing import Any, ClassVar
 
 import numpy as np
-from numpy.random import Generator
 
 import src.constants as c
-from src.core import Tensor, op
-from src.initialization import Initializer
+from src.tensor import Tensor, op
+from src.initialization import Initializer, XavierUniform
 
 from .trainable import Trainable
 
@@ -23,9 +22,9 @@ class Dense(Trainable):
     def __init__(
         self,
         features: int | tuple[int, int],
-        initializer: Initializer | None = None,
+        initializer: Initializer = XavierUniform(),
         *,
-        rng: Generator | None = None,
+        rng: Any = None,
     ):
         """
         Initializes a new layer in the neural network.
@@ -34,7 +33,7 @@ class Dense(Trainable):
                 If int, the number of nodes in the layer, the in features are inferred from the first call to forward.
                 If tuple, the number of (in features, out features)
             initializer (Initializer | None): The initializer for the weights of this layer. If None, the weights are not initialized.
-            rng (Generator | None): A random number generator instance for initializing weights.
+            rng (Any): A random number generator instance for initializing weights.
         Raises:
             ValueError: If any features is incorrect.
         """
@@ -53,12 +52,9 @@ class Dense(Trainable):
                 raise ValueError(f"The layer must have positive features. Got {features}")
 
             self._in_features, self._out_features = features
-
-            if self._initializer is not None:
-                self._initialize_weights()
+            self._initialize_weights()
 
         self.biases.set_data(op.zeros((1, self._out_features)))
-        self._requires_grad = False
 
     def __call__(self, data: Tensor[np.floating]) -> Tensor[np.floating]:
         if self._initializer is not None:

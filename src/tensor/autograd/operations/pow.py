@@ -1,10 +1,12 @@
-import cupy as cp
 import logging
 
-from ..function import Function
-from ... import tensor
-from ..utils import update_tensor_grad
+import cupy as cp
+
 from src.constants import EPSILON
+
+from ... import tensor
+from ..function import Function
+from ..utils import update_tensor_grad
 
 
 class Pow(Function):
@@ -38,7 +40,7 @@ class Pow(Function):
                     f"Cannot compute gradient with respect to b for a={a.data} <= 0. Gradient not modified."
                 )
                 return
-            
+
             xp = cp.get_array_module(a.data, b.data)
             gr = grad * (a.data**b.data * xp.log(a.data + EPSILON))
 

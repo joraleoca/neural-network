@@ -3,7 +3,7 @@ from typing import ClassVar
 import cupy as cp
 
 from .activation import ActivationFunction
-from src.core import Tensor, T
+from src.tensor import Tensor, T
 
 
 class LeakyRelu(ActivationFunction):

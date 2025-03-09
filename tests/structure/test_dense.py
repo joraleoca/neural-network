@@ -2,7 +2,7 @@ import pytest
 
 from src.structure import Dense
 from src.initialization import LeCunNormal, HeNormal
-from src.core import Tensor, op
+from src.tensor import Tensor, op
 
 
 class TestDense:

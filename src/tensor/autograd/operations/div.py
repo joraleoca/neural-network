@@ -1,7 +1,8 @@
-from ..function import Function
-from ... import tensor
 from src.constants import EPSILON
-from src.core.tensor.autograd.utils import update_tensor_grad
+
+from ... import tensor
+from ..function import Function
+from ..utils import update_tensor_grad
 
 
 class Div(Function):
@@ -18,7 +19,6 @@ class Div(Function):
             return a
 
         return self._create_output_tensor(a.data / (b.data + EPSILON))
-    
 
     def backward(self) -> None:
         a, b = self.args

@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 from .activation import ActivationFunction
-from src.core import Tensor, T, op
+from src.tensor import Tensor, T, op
 
 
 class Sigmoid(ActivationFunction):

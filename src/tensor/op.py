@@ -3,16 +3,13 @@ from typing import Sequence, SupportsIndex
 import numpy as np
 from numpy.typing import DTypeLike, ArrayLike
 
-from ..config import Config
 from .tensor import Tensor, T
 from .autograd import functions as func
 from .autograd import operations as ops
 from .utils import ensure_input_tensor
 
 
-def empty(
-    shape: tuple[int, ...], dtype: DTypeLike = None, *, requires_grad: bool = False
-) -> Tensor:
+def empty(shape: tuple[int, ...], dtype: DTypeLike = None, *, requires_grad: bool = False) -> Tensor:
     """
     Create an empty tensor of given shape.
     Args:
@@ -22,12 +19,10 @@ def empty(
     Returns:
         Tensor: A tensor of given shape.
     """
-    return Tensor(np.empty(shape), dtype=dtype or Config.default_dtype, requires_grad=requires_grad)
+    return Tensor(np.empty(shape), dtype=dtype or Tensor.default_dtype, requires_grad=requires_grad)
 
 
-def zeros_like(
-    arr: Tensor[T], dtype: DTypeLike = None, *, requires_grad: bool = False
-) -> Tensor[T]:
+def zeros_like(arr: Tensor[T], dtype: DTypeLike = None, *, requires_grad: bool = False) -> Tensor[T]:
     """
     Create a tensor filled with zeros with the same shape and dtype as the input tensor.
     Args:
@@ -61,7 +56,7 @@ def zeros(
     """
     return Tensor(
         np.zeros(shape),
-        dtype=dtype or Config.default_dtype,
+        dtype=dtype or Tensor.default_dtype,
         requires_grad=requires_grad,
     )
 
@@ -76,7 +71,8 @@ def exp(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]
     Returns:
         Tensor: The exponential of all elements in the input tensor.
     """
-    return input.apply_operation(ops.Pow(Tensor(np.e, dtype=Config.default_dtype), input), inplace=inplace)
+    return input.apply_operation(ops.Pow(Tensor(np.e, dtype=Tensor.default_dtype), input), inplace=inplace)
+
 
 @ensure_input_tensor
 def sum(
@@ -95,6 +91,7 @@ def sum(
     """
     return input.apply_operation(func.Sum(input, axis=axis, keepdims=keepdims))
 
+
 @ensure_input_tensor
 def max(
     input: Tensor[T] | ArrayLike | T,
@@ -111,6 +108,7 @@ def max(
         Tensor: The maximum of all elements in the input.
     """
     return input.apply_operation(func.Max(input, axis=axis, keepdims=keepdims))
+
 
 @ensure_input_tensor
 def min(
@@ -129,6 +127,7 @@ def min(
     """
     return input.apply_operation(func.Min(input, axis=axis, keepdims=keepdims))
 
+
 @ensure_input_tensor
 def mean(input: Tensor[T] | ArrayLike | T, *, axis: int | tuple[int, ...] | None = None) -> Tensor[T]:
     """
@@ -141,6 +140,7 @@ def mean(input: Tensor[T] | ArrayLike | T, *, axis: int | tuple[int, ...] | None
     """
     return input.apply_operation(func.Mean(input, axis=axis))
 
+
 @ensure_input_tensor
 def tanh(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]:
     """
@@ -152,6 +152,7 @@ def tanh(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T
         Tensor: The hyperbolic tangent of all elements in the input.
     """
     return input.apply_operation(func.Tanh(input), inplace=inplace)
+
 
 @ensure_input_tensor
 def log(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]:
@@ -189,6 +190,7 @@ def transpose(input: Tensor[T], *, axes: list[int] | tuple[int, ...] | int | Non
     """
     return input.apply_operation(operation=func.Transpose(input, axes=axes))
 
+
 def flatten(input: Tensor[T]) -> Tensor[T]:
     """
     Flatten the input tensor.
@@ -199,7 +201,8 @@ def flatten(input: Tensor[T]) -> Tensor[T]:
     """
     return input.apply_operation(operation=func.Flatten(input))
 
-def expand_dims(input: Tensor[T], axis: int | list[int] | tuple[int, ...]) -> Tensor[T] | T:
+
+def expand_dims(input: Tensor[T], axis: int | list[int] | tuple[int, ...]) -> Tensor[T]:
     """
     Expands the input tensor to the specified dimensions.
     Args:
@@ -209,6 +212,7 @@ def expand_dims(input: Tensor[T], axis: int | list[int] | tuple[int, ...]) -> Te
         Tensor: The expanded tensor.
     """
     return input.apply_operation(operation=func.ExpandDims(input, axis))
+
 
 @ensure_input_tensor
 def round(input: Tensor[T] | ArrayLike | T, decimals: int = 0, *, inplace: bool = False) -> Tensor[T]:
@@ -223,13 +227,9 @@ def round(input: Tensor[T] | ArrayLike | T, decimals: int = 0, *, inplace: bool 
     """
     return input.apply_operation(func.Round(input, decimals=decimals), inplace=inplace)
 
+
 @ensure_input_tensor
-def pad(
-        input: Tensor[T] | ArrayLike,
-        pad_width: int | tuple,
-        *,
-        value: T = 0
-) -> Tensor[T]:
+def pad(input: Tensor[T] | ArrayLike, pad_width: int | tuple, *, value: T = 0) -> Tensor[T]:
     """
     Pad the input tensor to the specified number of dimensions.
     Args:
@@ -240,6 +240,7 @@ def pad(
         Tensor: The padded tensor.
     """
     return input.apply_operation(func.Pad(input, pad_width=pad_width, value=value))
+
 
 def compose(tensors: list[Tensor[T]] | tuple[Tensor[T], ...]) -> Tensor[T]:
     """
@@ -254,6 +255,7 @@ def compose(tensors: list[Tensor[T]] | tuple[Tensor[T], ...]) -> Tensor[T]:
     # The tensor used to apply operation doesn't matter, and the first tensor will always exist.
     return tensors[0].apply_operation(func.Compose(tensors))
 
+
 def cce(predicted: Tensor[T], expected: Tensor[T]) -> Tensor[T]:
     """
     Compute the categorical cross-entropy loss.
@@ -265,10 +267,9 @@ def cce(predicted: Tensor[T], expected: Tensor[T]) -> Tensor[T]:
     """
     return predicted.apply_operation(func.CategoricalCrossentropy(predicted, expected))
 
+
 @ensure_input_tensor
-def as_strided(
-    input: Tensor[T] | ArrayLike | T, *, shape: tuple[int, ...], strides: tuple[int, ...]
-) -> Tensor[T]:
+def as_strided(input: Tensor[T] | ArrayLike | T, *, shape: tuple[int, ...], strides: tuple[int, ...]) -> Tensor[T]:
     """
     Create a strided tensor from the input.
     Args:
@@ -280,10 +281,9 @@ def as_strided(
     """
     return input.apply_operation(func.As_Strided(input, shape=shape, strides=strides))
 
+
 @ensure_input_tensor
-def argmax(
-    input: Tensor[T] | ArrayLike | T, *, axis: SupportsIndex | None = None, keepdims: bool = False
-) -> Tensor[T]:
+def argmax(input: Tensor[T] | ArrayLike | T, *, axis: SupportsIndex | None = None, keepdims: bool = False) -> Tensor[T]:
     """
     Compute the indices of the maximum values along the specified axis.
     Args:

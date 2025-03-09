@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 
 from tests.utils import assert_data, assert_grad
-from src.core import Tensor
+from src.tensor import Tensor
 from src.structure import LeakyRelu, Relu, Sigmoid, Softmax, Tanh, layer_from_name
 
 

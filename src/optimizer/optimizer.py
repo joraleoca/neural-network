@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from src.constants import EPSILON
-from src.core import Tensor
 from src.scheduler import Scheduler
+from src.tensor import Tensor
 
 
 class Optimizer(ABC):
@@ -30,6 +30,7 @@ class Optimizer(ABC):
         self.lr = lr
         self._params = params
 
+    @Tensor.no_grad()
     def step(self):
         """
         Optimizes the parameters of the given layers.
@@ -53,6 +54,13 @@ class Optimizer(ABC):
             self._optimize(self.lr.step())
         else:
             self._optimize(self.lr)
+
+    def zero_grad(self) -> None:
+        """
+        Zeroes the gradients of the parameters.
+        """
+        for param in self._params:
+            param.zero_grad()
 
     @abstractmethod
     def _optimize(

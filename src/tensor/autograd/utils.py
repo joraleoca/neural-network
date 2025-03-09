@@ -3,7 +3,8 @@ from copy import deepcopy
 import cupy as cp
 from numpy.typing import NDArray
 
-from src.core.tensor import tensor as t
+from .. import tensor as t
+
 
 def update_broadcast_grad(grad: NDArray, tensor: "t.Tensor") -> NDArray:
     """
@@ -21,7 +22,7 @@ def update_broadcast_grad(grad: NDArray, tensor: "t.Tensor") -> NDArray:
 
     grad_shape = grad.shape
     tensor_shape = tensor.shape
-    
+
     dim_diff = len(grad_shape) - len(tensor_shape)
     if dim_diff > 0:
         grad = grad.sum(axis=tuple(range(dim_diff)))
@@ -29,7 +30,7 @@ def update_broadcast_grad(grad: NDArray, tensor: "t.Tensor") -> NDArray:
     axes_to_sum = tuple(i for i, t in enumerate(tensor_shape) if t == 1)
     if axes_to_sum:
         grad = grad.sum(axis=axes_to_sum, keepdims=True)
-    
+
     return xp.atleast_1d(grad)
 
 

@@ -1,7 +1,6 @@
 import numpy as np
 
-from src.core import Tensor
-from src.core.tensor import op
+from src.tensor import Tensor, op
 from src.constants import EPSILON
 
 from .utils import assert_grad

@@ -1,13 +1,16 @@
+from abc import ABCMeta
+
 import cupy as cp
 import numpy as np
 from numpy.typing import DTypeLike
 
-from .tensor.device import Device
+from .device import Device
 
 
-class _ConfigMeta(type):
+class _ConfigMeta(ABCMeta):
     _default_device: str = "auto"
     _default_dtype: np.dtype = np.dtype(np.float32)
+    _grad: bool = True
 
     @property
     def default_device(cls) -> str:
@@ -51,5 +54,16 @@ class _ConfigMeta(type):
         """
         cls._default_dtype = np.dtype(dtype)
 
-class Config(metaclass=_ConfigMeta):
-    """Configuration class for default parameters of the tensors."""
+    @property
+    def grad(cls) -> bool:
+        return cls._grad
+
+    @classmethod
+    def set_grad(cls, grad: bool) -> None:
+        """
+        Set the gradient computation for the neural network.
+
+        Args:
+            grad: Whether to compute the gradients.
+        """
+        cls._grad = grad

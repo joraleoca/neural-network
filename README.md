@@ -49,7 +49,7 @@ Here's a basic example of how to use the neural network:
 
 ```python
 from src import NeuralNetwork, Config
-from src.core import Tensor
+from src.tensor import Tensor
 from src.config import FeedForwardConfig, TrainingConfig
 from src.loss import CategoricalCrossentropy
 from src.structure import Dense, LeakyRelu, Softmax

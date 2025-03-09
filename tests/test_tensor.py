@@ -5,7 +5,7 @@ import numpy as np
 from numpy.typing import NDArray, DTypeLike
 import pytest
 
-from src.core import Tensor, op, Config
+from src.tensor import Tensor, op
 from .utils import assert_data, assert_grad
 
 
@@ -376,12 +376,12 @@ class TestTensorMiscOperations:
 @pytest.mark.parametrize("device", ["cpu", "cuda"])
 def test_config(dtype: np.dtype | cp.dtype | DTypeLike, device: str) -> None:
     """Test tensor creation with custom configuration."""
-    Config.set_default_dtype(dtype)
-    Config.set_default_device(device)
+    Tensor.set_default_dtype(dtype)
+    Tensor.set_default_device(device)
     data = [1, 2, 3]
     tensor = Tensor(data)
-    assert_data(tensor, np.array(data, dtype=Config.default_dtype))
-    assert tensor.device == Config.default_device, f"Tensor device {tensor.device} should be {Config.default_device}"
-    assert tensor.dtype == Config.default_dtype, f"Data type should be {Config.default_dtype}. Got {tensor.dtype}"
+    assert_data(tensor, np.array(data, dtype=Tensor.default_dtype))
+    assert tensor.device == Tensor.default_device, f"Tensor device {tensor.device} should be {Tensor.default_device}"
+    assert tensor.dtype == Tensor.default_dtype, f"Data type should be {Tensor.default_dtype}. Got {tensor.dtype}"
 
-    Config.set_default_device("auto")
+    Tensor.set_default_device("auto")

@@ -1,6 +1,6 @@
-from ..function import Function
 from ... import tensor
-from src.core.tensor.autograd.utils import update_tensor_grad
+from ..function import Function
+from ..utils import update_tensor_grad
 
 
 class Sub(Function):

@@ -1,24 +1,26 @@
 from collections import deque
 from collections.abc import MutableSequence
+from contextlib import ContextDecorator
 from graphlib import TopologicalSorter
-from typing import Any, SupportsIndex, TypeVar
+from typing import Any, ClassVar, SupportsIndex, TypeVar, Iterable, Callable
 
 import cupy as cp
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike, NDArray
 
-from ..config import Config
 from .autograd import (
     Function,
     functions as func,
     operations as op,
 )
+
+from .config import _ConfigMeta
 from .device import Device
 
 T = TypeVar("T", bound=cp.generic)
 
 
-class Tensor(MutableSequence[T]):
+class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
     """A class representing a multidimensional array (tensor) with support for automatic differentiation."""
 
     __slots__ = "data", "grad", "_requires_grad", "_grad_operation", "_device"
@@ -31,6 +33,9 @@ class Tensor(MutableSequence[T]):
     _grad_operation: Function | None
 
     _device: Device
+
+    default_device: ClassVar[Device] = Device.AUTO
+    default_dtype: ClassVar[np.dtype] = np.dtype(np.float32)
 
     def __init__(
         self,
@@ -56,8 +61,12 @@ class Tensor(MutableSequence[T]):
                     - "cuda"   : Create the tensor on the GPU (raises an error if not available).
                     - "auto"   : Automatically choose the GPU if available, otherwise use the CPU.
         """
-        self._device = Device(device or Config.default_device)
-        self.set_data(data, dtype=dtype or Config.default_dtype)
+        self._device = Device(device or Tensor.default_device)
+
+        if dtype is None:
+            dtype = data.dtype if hasattr(data, "dtype") else Tensor.default_dtype  # type: ignore
+
+        self.set_data(data, dtype=dtype)
         self._requires_grad = requires_grad
         self._grad_operation = None
         self.grad = None
@@ -315,6 +324,22 @@ class Tensor(MutableSequence[T]):
             case _:
                 raise ValueError(f"Unknown device {device}")
 
+    def sequential(self, pipeline: "Iterable[Callable[[Tensor], Tensor]]") -> "Tensor[T]":
+        """
+        Applies a sequence of operations to the tensor.
+
+        Args:
+            pipeline (Iterable[Callable[[Tensor], Tensor]]): A iterable of operations to apply.
+        Returns:
+            Tensor: The result of the operations.
+        """
+        result = self
+
+        for operation in pipeline:
+            result = operation(result)
+
+        return result
+
     def item(self) -> T:
         """Returns the value of the tensor as a standard Python scalar."""
         return self.data.item()
@@ -384,7 +409,7 @@ class Tensor(MutableSequence[T]):
         return self.apply_operation(operation=func.Mean(self, axis=axis))
 
     def argmax(
-        self, *, axis: SupportsIndex | None = None, dtype: DTypeLike, out: None = None, keepdims: bool = False
+        self, *, axis: SupportsIndex | None = None, dtype: DTypeLike = None, out: None = None, keepdims: bool = False
     ) -> "Tensor[T]":
         """
         Returns the indices of the maximum values along an axis.
@@ -398,7 +423,7 @@ class Tensor(MutableSequence[T]):
             Tensor: A tensor with the indices of the maximum values along the specified axis.
         """
         out_ = self.apply_operation(operation=func.Argmax(self, axis=axis, keepdims=keepdims))
-        out_.dtype = dtype
+        out_.dtype = dtype or self.dtype
         return out_
 
     def reshape(self, shape: tuple[int, ...], *, inplace: bool = True) -> "Tensor[T]":
@@ -438,7 +463,7 @@ class Tensor(MutableSequence[T]):
         Returns:
             Tensor: The result of the operation, either a new tensor or the modified current tensor.
         """
-        if inplace and self._requires_grad:
+        if inplace and self._requires_grad and Tensor.grad:
             raise ValueError("Inplace operations are not supported for tensors with gradient tracking.")
 
         result = operation(inplace=inplace)
@@ -462,8 +487,8 @@ class Tensor(MutableSequence[T]):
 
             if self.data.dtype.kind == "f":
                 dtype_ = xp.dtype(self.data.dtype)
-            elif Config.default_dtype.kind == "f":
-                dtype_ = Config.default_dtype
+            elif Tensor.default_dtype.kind == "f":
+                dtype_ = Tensor.default_dtype
             else:
                 dtype_ = np.float32
 
@@ -512,6 +537,20 @@ class Tensor(MutableSequence[T]):
             self.grad = None
 
         self._grad_operation = None
+
+    class no_grad(ContextDecorator):
+        """
+        A context manager and decorator to disable gradient tracking for a block of code.
+        """
+
+        __slots__ = "prev"
+
+        def __enter__(self) -> None:
+            self.prev = Tensor.grad
+            Tensor.set_grad(False)
+
+        def __exit__(self, *exc) -> None:
+            Tensor.set_grad(self.prev)
 
     # The last method so it does not interfere with the generic type
     @property
