@@ -1,59 +1,52 @@
 import cupy as cp
-import numpy as np
 
 from ..function import Function
-from ... import tensor
+from ... import tensor as t
+from ..context import Context
 
 
 class Sum(Function):
     """Function that computes the sum of a tensor."""
 
-    __slots__ = ["axis", "keepdims"]
-
-    def __init__(
-        self, a, *, axis: tuple[int, ...] | int | None = None, keepdims: bool = False
-    ):
-        self.args = (a,)
-        self.axis = axis
-        self.keepdims = keepdims
-
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
+    @staticmethod
+    def forward(
+        a: "t.Tensor", axis: tuple[int, ...] | int | None = None, keepdims: bool = False, *, inplace: bool = False
+    ) -> "t.Tensor":
         if inplace:
             raise NotImplementedError("Inplace addition is not supported.")
 
-        a = self.args[0]
-        xp = cp.get_array_module(a.data)
+        out = t.Tensor(
+            a.data.sum(axis=axis, keepdims=keepdims),
+            requires_grad=Function._requires_grad(a),
+            device=Function._select_device(a),
+        )
 
-        return self._create_output_tensor(xp.sum(a.data, axis=self.axis, keepdims=self.keepdims))
+        if out.requires_grad:
+            ctx = Context(a, result=out, backward_fn=Sum.backward, axis=axis, keepdims=keepdims)
+            out._grad_ctx = ctx
 
-    def backward(self) -> None:
-        a = self.args[0]
+        return out
+
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        a = ctx.args[0]
         if not a.requires_grad:
             return
 
-        grad = self.result.grad
+        grad = ctx.result.grad
         xp = cp.get_array_module(grad)
 
         # Handle scalar gradient (from global sum)
-        if xp.isscalar(grad) or grad.size == 1 or self.keepdims:
-            xp = cp.get_array_module(a.data)
-            gr = grad * xp.ones_like(a.data)
-            if a.grad is None:
-                a.grad = gr
-            else:
-                a.grad += gr
-            return
-
-        # Handle axis-specific sums
-        grad_shape = list(a.data.shape)
-        if self.axis is not None:
-            xp = cp.get_array_module(a.data)
-            for ax in np.atleast_1d(self.axis):
-                grad_shape[ax] = 1
-
-        gr = xp.broadcast_to(xp.reshape(grad, grad_shape), a.shape)
-
-        if a.grad is None:
-            a.grad = gr
+        if xp.isscalar(grad) or grad.size == 1 or ctx.kwargs["keepdims"]:
+            gr = grad.reshape(a.shape)
         else:
-            a.grad += gr
+            # Handle axis-specific sums
+            grad_shape = list(a.data.shape)
+            axis = ctx.kwargs["axis"]
+            if axis is not None:
+                for ax in xp.atleast_1d(axis):
+                    grad_shape[ax] = 1
+
+            gr = xp.broadcast_to(grad.reshape(grad_shape), a.shape)
+
+        a.update_grad(gr)

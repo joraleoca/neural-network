@@ -1,37 +1,36 @@
-from copy import deepcopy
-
 from ..function import Function
-from ... import tensor
+from ... import tensor as t
+from ..context import Context
 
 
 class Compose(Function):
     """Compose function."""
 
-    def __init__(self, tensors: "list[tensor.Tensor] | tuple[tensor.Tensor, ...]") -> None:
-        self.args = tuple(tensors)
-
-        shape = tensors[0].shape
-
-        if not all(shape == t.shape for t in tensors):
-            raise ValueError("All tensors must be of the same shape")
-
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
+    @staticmethod
+    def forward(*args: "t.Tensor", inplace: bool = False) -> "t.Tensor":
         if inplace:
             raise NotImplementedError("Inplace compose is not supported.")
 
-        self.result = tensor.Tensor(
-            self.args,
-            requires_grad=any(t.requires_grad for t in self.args),
+        shape = args[0].shape
+        if not all(shape == t.shape for t in args):
+            raise ValueError("All tensors must be of the same shape")
+
+        out = t.Tensor(
+            args,
+            requires_grad=Function._requires_grad(*args),
+            device=Function._select_device(*args),
         )
 
-        return self.result
+        if out.requires_grad:
+            ctx = Context(*args, result=out, backward_fn=Compose.backward)
+            out._grad_ctx = ctx
 
-    def backward(self) -> None:
-        grad = self.result.grad
+        return out
 
-        for i, t in enumerate(self.args):
-            if t.requires_grad:
-                if t.grad is None:
-                    t.grad = deepcopy(grad[i])
-                else:
-                    t.grad += grad[i]
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        grad = ctx.result.grad
+
+        for i, tensor in enumerate(ctx.args):
+            if tensor.requires_grad:
+                tensor.update_grad(grad[i])

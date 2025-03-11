@@ -1,30 +1,36 @@
+from ... import tensor as t
+from ..context import Context
 from ..function import Function
-from ... import tensor
 
 
 class Neg(Function):
     """Function that computes the element-wise negation of a tensor."""
 
-    def __init__(self, a: "tensor.Tensor") -> None:
-        self.args = (a,)
-
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
-        a = self.args[0]
-
+    @staticmethod
+    def forward(a: "t.Tensor", *, inplace: bool = False) -> "t.Tensor":
         if inplace:
-            a.data[:] = -a.data
+            a.data *= -1
             return a
 
+        out = t.Tensor(
+            -a.data,
+            requires_grad=Function._requires_grad(a),
+            device=Function._select_device(a),
+        )
 
-        return self._create_output_tensor(-a.data)
+        if out.requires_grad:
+            ctx = Context(a, result=out, backward_fn=Neg.backward)
+            out._grad_ctx = ctx
 
+        return out
 
-    def backward(self) -> None:
-        a = self.args[0]
-        grad = self.result.grad
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        a = ctx.args[0]
+        if not a.requires_grad:
+            return
+
+        grad = ctx.result.grad
 
         if a.requires_grad:
-            if a.grad is None:
-                a.grad = -grad
-            else:
-                a.grad -= grad
+            a.update_grad(-grad)

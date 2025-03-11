@@ -10,6 +10,7 @@ from numpy.typing import ArrayLike, DTypeLike, NDArray
 
 from .autograd import (
     Function,
+    Context,
     functions as func,
     operations as op,
 )
@@ -23,14 +24,14 @@ T = TypeVar("T", bound=cp.generic)
 class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
     """A class representing a multidimensional array (tensor) with support for automatic differentiation."""
 
-    __slots__ = "data", "grad", "_requires_grad", "_grad_operation", "_device"
+    __slots__ = "data", "grad", "_requires_grad", "_grad_ctx", "_device"
 
     data: NDArray[T]
     grad: NDArray[cp.floating] | None
 
     _requires_grad: bool
 
-    _grad_operation: Function | None
+    _grad_ctx: Context | None
 
     _device: Device
 
@@ -68,7 +69,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
 
         self.set_data(data, dtype=dtype)
         self._requires_grad = requires_grad
-        self._grad_operation = None
+        self._grad_ctx = None
         self.grad = None
 
     """Magic methods"""
@@ -77,7 +78,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         return len(self.data)
 
     def __getitem__(self, idx) -> "Tensor[T] | T":
-        return self.apply_operation(op.Index(self, idx))
+        return op.Index.forward(self, idx, inplace=False)
 
     def __setitem__(self, idx, value) -> None:
         if self.requires_grad:
@@ -100,12 +101,12 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         return data.astype(dtype)
 
     def __neg__(self) -> "Tensor[T]":
-        return self.apply_operation(op.Neg(self), inplace=False)
+        return op.Neg.forward(self, inplace=False)
 
     def __add__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(op.Add(self, other), inplace=False)
+        return op.Add.forward(self, other, inplace=False)
 
     def __radd__(self, other: ArrayLike) -> "Tensor[T]":
         return self.__add__(other)
@@ -113,27 +114,27 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
     def __iadd__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(op.Add(self, other), inplace=True)
+        return op.Add.forward(self, other, inplace=True)
 
     def __sub__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(op.Sub(self, other), inplace=False)
+        return op.Sub.forward(self, other, inplace=False)
 
     def __rsub__(self, other: ArrayLike):
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return other.__sub__(self)
+        return op.Sub.forward(other, self, inplace=False)
 
     def __isub__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(op.Sub(self, other), inplace=True)
+        return op.Sub.forward(self, other, inplace=True)
 
     def __mul__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(op.Mul(self, other), inplace=False)
+        return op.Mul.forward(self, other, inplace=False)
 
     def __rmul__(self, other: ArrayLike):
         return self.__mul__(other)
@@ -141,56 +142,55 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
     def __imul__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(op.Mul(self, other), inplace=True)
+        return op.Mul.forward(self, other, inplace=True)
 
     def __truediv__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(op.Div(self, other), inplace=False)
+        return op.Div.forward(self, other, inplace=False)
 
     def __rtruediv__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, dtype=self.dtype)
-        return other.__truediv__(self)
+        return op.Div.forward(other, self, inplace=False)
 
     def __itruediv__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(op.Div(self, other), inplace=True)
+        return op.Div.forward(self, other, inplace=True)
 
     def __pow__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(op.Pow(self, other), inplace=False)
+        return op.Pow.forward(self, other, inplace=False)
 
     def __rpow__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, dtype=self.dtype)
-        return other.__pow__(self)
+        return op.Pow.forward(other, self, inplace=False)
 
     def __ipow__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(operation=op.Pow(self, other), inplace=True)
+        return op.Pow.forward(self, other, inplace=True)
 
     def __matmul__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(op.Matmul(self, other), inplace=False)
+        return op.Matmul.forward(self, other, inplace=False)
 
     def __rmatmul__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, dtype=self.dtype)
-        return other.__matmul__(self)
+        return op.Matmul.forward(other, self, inplace=False)
 
     def __imatmul__(self, other: ArrayLike) -> "Tensor[T]":
         if not isinstance(other, Tensor):
             other = Tensor(other, device=self.device)
-        return self.apply_operation(op.Matmul(self, other), inplace=True)
+        return op.Matmul.forward(self, other, inplace=True)
 
     def __eq__(self, other: ArrayLike) -> bool:
         xp = cp.get_array_module(self.data)
-        other = xp.array(other)
         return xp.array_equal(self.data, other)
 
     def __ne__(self, other: ArrayLike) -> bool:
@@ -198,26 +198,22 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
 
     def __lt__(self, other: ArrayLike) -> NDArray[cp.bool_]:
         xp = cp.get_array_module(self.data)
-        other = xp.array(other)
         return xp.less(self.data, other)
 
     def __le__(self, other: ArrayLike) -> NDArray[cp.bool_]:
         xp = cp.get_array_module(self.data)
-        other = xp.array(other)
         return xp.less_equal(self.data, other)
 
     def __gt__(self, other: ArrayLike) -> NDArray[cp.bool_]:
         xp = cp.get_array_module(self.data)
-        other = xp.array(other)
         return xp.greater(self.data, other)
 
     def __ge__(self, other: ArrayLike) -> NDArray[cp.bool_]:
         xp = cp.get_array_module(self.data)
-        other = xp.array(other)
         return xp.greater_equal(self.data, other)
 
     def __abs__(self) -> "Tensor[T]":
-        return self.apply_operation(inplace=False, operation=op.Abs(self))
+        return op.Abs.forward(self)
 
     def __str__(self) -> str:
         return str(self.data)
@@ -233,7 +229,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         return self.data.__contains__(value)
 
     def __round__(self, decimals: int = 0) -> "Tensor[T]":
-        return self.apply_operation(inplace=False, operation=func.Round(self, decimals=decimals))
+        return func.Round.forward(self, decimals=decimals)
 
     def __index__(self) -> int:
         return self.data.__index__()  # type: ignore
@@ -357,7 +353,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
             Tensor[T] | T:
                 A tensor with the sum of elements along the specified axis. If no axis is specified, returns the sum of all elements as a scalar.
         """
-        return self.apply_operation(operation=func.Sum(self, axis=axis, keepdims=keepdims))
+        return func.Sum.forward(self, axis=axis, keepdims=keepdims)
 
     def max(self, axis: SupportsIndex | None = None, keepdims: bool = False) -> "Tensor[T] | T":
         """
@@ -374,7 +370,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
                 A tensor with the maximum value of elements along the specified axis.
                 If no axis is specified, returns the maximum element as a scalar.
         """
-        return self.apply_operation(operation=func.Max(self, axis=axis, keepdims=keepdims))
+        return func.Max.forward(self, axis=axis, keepdims=keepdims)
 
     def min(self, axis: SupportsIndex | None = None, keepdims: bool = False) -> "Tensor[T] | T":
         """
@@ -391,7 +387,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
                 A tensor with the minimum value of elements along the specified axis.
                 If no axis is specified, returns the minimum element as a scalar.
         """
-        return self.apply_operation(operation=func.Min(self, axis=axis, keepdims=keepdims))
+        return func.Min.forward(self, axis=axis, keepdims=keepdims)
 
     def mean(self, axis: int | tuple[int, ...] | None = None) -> "Tensor[T] | T":
         """
@@ -406,7 +402,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
                 A tensor with the mean value of elements along the specified axis.
                 If no axis is specified, returns the mean element as a scalar.
         """
-        return self.apply_operation(operation=func.Mean(self, axis=axis))
+        return func.Mean.forward(self, axis=axis)
 
     def argmax(
         self, *, axis: SupportsIndex | None = None, dtype: DTypeLike = None, out: None = None, keepdims: bool = False
@@ -422,11 +418,11 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         Returns:
             Tensor: A tensor with the indices of the maximum values along the specified axis.
         """
-        out_ = self.apply_operation(operation=func.Argmax(self, axis=axis, keepdims=keepdims))
+        out_ = func.Argmax.forward(self, axis=axis, keepdims=keepdims)
         out_.dtype = dtype or self.dtype
         return out_
 
-    def reshape(self, shape: tuple[int, ...], *, inplace: bool = True) -> "Tensor[T]":
+    def reshape(self, shape: tuple[int, ...], *, inplace: bool = False) -> "Tensor[T]":
         """
         Returns a new tensor with the same data but a different shape.
 
@@ -435,7 +431,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         Returns:
             Tensor: A new tensor with the specified shape.
         """
-        return self.apply_operation(operation=func.Reshape(self, shape=shape), inplace=inplace)
+        return func.Reshape.forward(self, shape=shape, inplace=inplace)
 
     def flatten(self) -> "Tensor[T]":
         """
@@ -444,7 +440,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         Returns:
             Tensor: A new 1D tensor.
         """
-        return self.apply_operation(operation=func.Flatten(self))
+        return func.Flatten.forward(self)
 
     def fill(self, value: Any) -> None:
         if self.requires_grad:
@@ -453,25 +449,34 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
 
     """Autograd"""
 
-    def apply_operation(self, operation: Function, inplace: bool = False) -> "Tensor[T]":
+    def update_grad(self, grad: NDArray[cp.floating]) -> None:
         """
-        Applies a specified operation between the current tensor and another tensor.
+        Updates the gradient of the tensor.
 
         Args:
-            operation (type[Function]): The operation to apply.
-            inplace (bool): If True, the operation is applied in place, modifying the current tensor.
-        Returns:
-            Tensor: The result of the operation, either a new tensor or the modified current tensor.
+            grad (NDArray[cp.floating]): The new gradient.
         """
-        if inplace and self._requires_grad and Tensor.grad:
-            raise ValueError("Inplace operations are not supported for tensors with gradient tracking.")
+        assert self.requires_grad, "Cannot compute gradient of a tensor that does not require grad."
 
-        result = operation(inplace=inplace)
+        if self.shape != grad.shape:
+            xp = cp.get_array_module(grad)
+            if self.size == 1:
+                grad = grad.sum()
+            else:
+                dim_diff = grad.ndim - self.ndim
+                if dim_diff > 0:
+                    grad = grad.sum(axis=tuple(range(dim_diff)))
 
-        if result.requires_grad:
-            result._grad_operation = operation
+                axes_to_sum = tuple(i for i, t in enumerate(self.shape) if t == 1)
+                if axes_to_sum:
+                    grad = grad.sum(axis=axes_to_sum, keepdims=True)
 
-        return result
+            grad = xp.atleast_1d(grad)
+
+        if self.grad is None:
+            self.grad = grad
+        else:
+            self.grad += grad
 
     def backward(self) -> None:
         """
@@ -511,32 +516,28 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
             TopologicalSorter[Function]: A graph of the gradient operations.
         """
         graph = TopologicalSorter()
-        graph.add(self._grad_operation)
+        graph.add(self._grad_ctx)
         to_visit: deque[Tensor] = deque([self])
 
         while to_visit:
             tensor: Tensor = to_visit.popleft()
 
-            if not tensor._grad_operation:
+            if not tensor._grad_ctx:
                 continue
 
-            for t in tensor._grad_operation.args:
-                if t._grad_operation:
-                    graph.add(t._grad_operation, tensor._grad_operation)
+            for t in tensor._grad_ctx.args:
+                if t._grad_ctx:
+                    graph.add(t._grad_ctx, tensor._grad_ctx)
                     to_visit.append(t)
 
-            tensor._grad_operation = None
+            tensor._grad_ctx = None
 
         return graph
 
     def zero_grad(self) -> None:
         """Clears the gradient of the tensor."""
-        if self._requires_grad and self.grad is not None and self.grad.size != 1:
-            self.grad.fill(0)
-        else:
-            self.grad = None
-
-        self._grad_operation = None
+        self.grad = None
+        self._grad_ctx = None
 
     class no_grad(ContextDecorator):
         """
@@ -556,4 +557,4 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
     @property
     def T(self) -> "Tensor[T]":
         """Returns the transpose of the tensor."""
-        return self.apply_operation(func.Transpose(self), inplace=False)
+        return func.Transpose.forward(self, inplace=False)

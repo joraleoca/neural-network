@@ -3,49 +3,49 @@ from typing import SupportsIndex, Sequence
 import cupy as cp
 
 from ..function import Function
-from ... import tensor
+from ... import tensor as t
+from ..context import Context
 
 
 class Max(Function):
     """Function that computes the maximum value of a tensor."""
 
-    __slots__ = ["axis", "keepdims"]
-
-    def __init__(
-        self,
-        a: "tensor.Tensor",
-        *,
+    @staticmethod
+    def forward(
+        a: "t.Tensor",
         axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
         keepdims: bool = False,
-    ):
-        self.args = (a,)
-        self.axis = axis
-        self.keepdims = keepdims
-
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
+        *,
+        inplace: bool = False,
+    ) -> "t.Tensor":
         if inplace:
             raise NotImplementedError("Inplace max is not supported.")
 
-        a = self.args[0]
-
-        return self._create_output_tensor(
-            a.data.max(axis=self.axis, keepdims=self.keepdims)
+        out = t.Tensor(
+            a.data.max(axis=axis, keepdims=keepdims),
+            requires_grad=Function._requires_grad(a),
+            device=Function._select_device(a),
         )
 
-    def backward(self) -> None:
-        a = self.args[0]
-        grad = self.result.grad
+        if out.requires_grad:
+            ctx = Context(a, result=out, backward_fn=Max.backward, axis=axis, keepdims=keepdims)
+            out._grad_ctx = ctx
 
-        if a.requires_grad:
-            mask = a.data == a.data.max(axis=self.axis, keepdims=True)
+        return out
 
-            if self.axis is not None and not self.keepdims:
-                xp = cp.get_array_module(grad)
-                grad = xp.expand_dims(grad, self.axis)
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        a = ctx.args[0]
+        if not a.requires_grad:
+            return
 
-            gr = grad * mask
+        grad = ctx.result.grad
 
-            if a.grad is None:
-                a.grad = gr
-            else:
-                a.grad += gr
+        axis = ctx.kwargs["axis"]
+        mask = a.data == a.data.max(axis=axis, keepdims=True)
+
+        if axis is not None and not ctx.kwargs["keepdims"]:
+            xp = cp.get_array_module(grad)
+            grad = xp.expand_dims(grad, axis)
+
+        a.update_grad(grad * mask)

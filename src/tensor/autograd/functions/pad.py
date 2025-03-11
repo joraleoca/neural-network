@@ -1,46 +1,39 @@
 import cupy as cp
 
 from ..function import Function
-from ... import tensor
+from ... import tensor as t
+from ..context import Context
 
 
 class Pad(Function):
     """Pad a tensor."""
 
-    __slots__ = ["original_shape", "pad_width", "value"]
-
-    def __init__[T](
-        self, a: "tensor.Tensor[T]", pad_width: int | tuple = 0, *, value: T = 0
-    ) -> None:
-        self.args = (a,)
-        self.original_shape = a.shape
-        self.pad_width = pad_width
-        self.value = value
-
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
+    @staticmethod
+    def forward[T](a: "t.Tensor[T]", pad_width: int | tuple = 0, value: T = 0, *, inplace: bool = False) -> "t.Tensor":
         if inplace:
             raise NotImplementedError("Inplace padding is not supported.")
 
-        a = self.args[0]
         xp = cp.get_array_module(a.data)
 
-        return self._create_output_tensor(
-            xp.pad(
-                a.data, pad_width=self.pad_width, mode="constant", constant_values=self.value
-            )
+        out = t.Tensor(
+            xp.pad(a.data, pad_width=pad_width, mode="constant", constant_values=value),
+            requires_grad=Function._requires_grad(a),
+            device=Function._select_device(a),
         )
 
-    def backward(self) -> None:
-        a = self.args[0]
-        grad = self.result.grad
+        if out.requires_grad:
+            ctx = Context(a, result=out, backward_fn=Pad.backward, pad_width=pad_width)
+            out._grad_ctx = ctx
+
+        return out
+
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        a = ctx.args[0]
 
         if a.requires_grad:
-            gr = grad[_index(self.pad_width)]
+            a.update_grad(ctx.result.grad[_index(ctx.kwargs["pad_width"])])
 
-            if a.grad is None:
-                a.grad = gr
-            else:
-                a.grad += gr
 
 def _index(pad_width: int | tuple) -> tuple[slice, ...]:
     if isinstance(pad_width, int):

@@ -1,53 +1,51 @@
-import numpy as np
 import cupy as cp
 
 from ..function import Function
-from ... import tensor
+from ... import tensor as t
+from ..context import Context
 
 
 class Mean(Function):
     """Function that computes the mean value of a tensor."""
 
-    __slots__ = ["axis"]
-
-    def __init__(
-        self,
-        a: "tensor.Tensor",
-        *,
-        axis: int | tuple[int, ...] | None = None,
-    ):
-        self.args = (a,)
-        self.axis = axis
-
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
+    @staticmethod
+    def forward(a: "t.Tensor", axis: int | tuple[int, ...] | None = None, *, inplace: bool = False) -> "t.Tensor":
         if inplace:
             raise NotImplementedError("Inplace mean is not supported.")
 
-        a = self.args[0]
+        out = t.Tensor(
+            a.data.mean(axis=axis),
+            requires_grad=Function._requires_grad(a),
+            device=Function._select_device(a),
+        )
 
-        return self._create_output_tensor(a.data.mean(axis=self.axis))
+        if out.requires_grad:
+            ctx = Context(a, result=out, backward_fn=Mean.backward, axis=axis)
+            out._grad_ctx = ctx
 
-    def backward(self) -> None:
-        a = self.args[0]
-        grad = self.result.grad
+        return out
+
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        a = ctx.args[0]
+        if not a.requires_grad:
+            return
+
+        grad = ctx.result.grad
         xp = cp.get_array_module(grad)
 
-        if a.requires_grad:
-            n = a.data.size
+        n = a.data.size
 
-            if grad.size == 1:
-                grad = xp.broadcast_to(grad, a.shape)
-            else:
-                axis_ = self.axis if isinstance(self.axis, tuple) else (self.axis,)
-                if self.axis is not None:
-                    xp = cp.get_array_module(grad)
-                    grad = xp.expand_dims(grad, axis_)
+        if grad.size == 1:
+            grad = xp.broadcast_to(grad, a.shape)
+        else:
+            axis_ = ctx.kwargs["axis"]
+            if axis_ is not None:
+                if not isinstance(axis_, tuple):
+                    axis_ = (axis_,)
 
-                    n = np.prod([a.data.shape[i] for i in axis_])
-                
-            gr = grad / n
+                grad = xp.expand_dims(grad, axis_)
 
-            if a.grad is None:
-                a.grad = gr
-            else:
-                a.grad += gr
+                n = xp.prod([a.data.shape[i] for i in axis_])
+
+        a.update_grad(grad / n)

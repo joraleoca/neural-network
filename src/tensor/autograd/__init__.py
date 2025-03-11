@@ -3,5 +3,6 @@ This module contains the autograd engine, which is responsible for computing gra
 """
 
 from .function import Function
+from .context import Context
 
-__all__ = "Function"
+__all__ = "Function", "Context"

@@ -1,40 +1,37 @@
 from typing import SupportsIndex
-from copy import deepcopy
 
 from ..function import Function
-from ... import tensor
+from ... import tensor as t
+from ..context import Context
 
 
 class Argmax(Function):
     """Function that computes the indices of the maximum values along an axis."""
 
-    __slots__ = "axis", "keepdims"
-
-    def __init__(self, a: "tensor.Tensor", *, axis: SupportsIndex | None = None, keepdims: bool = False):
-        self.args = (a,)
-        self.axis = axis
-        self.keepdims = keepdims
-
+    @staticmethod
+    def forward(
+        a: "t.Tensor", axis: SupportsIndex | None = None, keepdims: bool = False, *, inplace: bool = False
+    ) -> "t.Tensor":
+        if inplace:
+            raise ValueError("Inplace argmax is not supported.")
         if axis is None and keepdims:
             raise ValueError("keepdims can only be set to True if axis is specified. Got axis=None and keepdims=True")
 
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
-        if inplace:
-            raise ValueError("Inplace argmax is not supported.")
-
-        a = self.args[0]
-
-        return self._create_output_tensor(
-            a.data.argmax(axis=self.axis, keepdims=self.keepdims)  # type: ignore Already checked in the constructor
+        out = t.Tensor(
+            a.data.argmax(axis=axis, keepdims=keepdims),  # type: ignore Already checked for no valid combination
+            requires_grad=Function._requires_grad(a),
+            device=Function._select_device(a),
         )
 
-    def backward(self) -> None:
-        a = self.args[0]
-        grad = self.result.grad
+        if out.requires_grad:
+            ctx = Context(a, result=out, backward_fn=Argmax.backward)
+            out._grad_ctx = ctx
+
+        return out
+
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        a = ctx.args[0]
 
         if a.requires_grad:
-            # Not differentiable, but we need to propagate the gradient
-            if a.grad is None:
-                a.grad = deepcopy(grad)
-            else:
-                a.grad += grad
+            a.update_grad(ctx.result.grad)  # Not differentiable, so just pass the gradient through

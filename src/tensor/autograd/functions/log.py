@@ -1,35 +1,36 @@
 import cupy as cp
 
 from ..function import Function
-from ... import tensor
+from ... import tensor as t
+from ..context import Context
 
 
 class Log(Function):
     """Function that computes the element-wise natural logarithm of a tensor."""
 
-    def __init__(self, a: "tensor.Tensor"):
-        self.args = (a,)
-
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
-        a = self.args[0]
+    @staticmethod
+    def forward(a: "t.Tensor", *, inplace: bool = False) -> "t.Tensor":
         xp = cp.get_array_module(a.data)
 
-        data = xp.log(a.data)
-
         if inplace:
-            a.data = data
+            xp.log(a.data, out=a.data)
             return a
 
-        return self._create_output_tensor(data)
+        out = t.Tensor(
+            xp.log(a.data),
+            requires_grad=Function._requires_grad(a),
+            device=Function._select_device(a),
+        )
 
-    def backward(self) -> None:
-        a = self.args[0]
-        grad = self.result.grad
+        if out.requires_grad:
+            ctx = Context(a, result=out, backward_fn=Log.backward)
+            out._grad_ctx = ctx
+
+        return out
+
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        a = ctx.args[0]
 
         if a.requires_grad:
-            gr = grad * 1 / a.data
-
-            if a.grad is None:
-                a.grad = gr
-            else:
-                a.grad += grad * 1 / a.data
+            a.update_grad(ctx.result.grad * 1 / a.data)

@@ -1,39 +1,33 @@
-import cupy as cp
-
 from ..function import Function
-from ... import tensor
+from ... import tensor as t
+from ..context import Context
 
 
 class Reshape(Function):
     """Function that reshapes a tensor."""
 
-    __slots__ = ["shape"]
-
-    def __init__(self, a: "tensor.Tensor", *, shape: tuple[int, ...]):
-        self.args = (a,)
-        self.shape = shape
-
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
-        a = self.args[0]
-        xp = cp.get_array_module(a.data)
-
-        data = xp.reshape(a.data, self.shape)
-
+    @staticmethod
+    def forward(a: "t.Tensor", shape: tuple[int, ...], *, inplace: bool = False) -> "t.Tensor":
         if inplace:
-            a.data = data
+            a.data = a.data.reshape(shape)
             return a
 
-        return self._create_output_tensor(data)
+        out = t.Tensor(
+            a.data.reshape(shape),
+            requires_grad=Function._requires_grad(a),
+            device=Function._select_device(a),
+        )
 
-    def backward(self) -> None:
-        a = self.args[0]
-        grad = self.result.grad
+        if out.requires_grad:
+            ctx = Context(a, result=out, backward_fn=Reshape.backward)
+            out._grad_ctx = ctx
 
-        if a.requires_grad:
-            xp = cp.get_array_module(grad)
-            gr = xp.reshape(grad, a.data.shape)
+        return out
 
-            if a.grad is None:
-                a.grad = gr
-            else:
-                a.grad += gr
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        a = ctx.args[0]
+        if not a.requires_grad:
+            return
+
+        a.update_grad(ctx.result.grad.reshape(a.shape))

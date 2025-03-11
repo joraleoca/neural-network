@@ -71,7 +71,7 @@ def exp(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]
     Returns:
         Tensor: The exponential of all elements in the input tensor.
     """
-    return input.apply_operation(ops.Pow(Tensor(np.e, dtype=Tensor.default_dtype), input), inplace=inplace)
+    return ops.Pow.forward(Tensor(np.e, dtype=Tensor.default_dtype), input, inplace=inplace)
 
 
 @ensure_input_tensor
@@ -89,7 +89,7 @@ def sum(
     Returns:
         Tensor: The sum of all elements in the input.
     """
-    return input.apply_operation(func.Sum(input, axis=axis, keepdims=keepdims))
+    return func.Sum.forward(input, axis=axis, keepdims=keepdims)
 
 
 @ensure_input_tensor
@@ -107,7 +107,7 @@ def max(
     Returns:
         Tensor: The maximum of all elements in the input.
     """
-    return input.apply_operation(func.Max(input, axis=axis, keepdims=keepdims))
+    return func.Max.forward(input, axis=axis, keepdims=keepdims)
 
 
 @ensure_input_tensor
@@ -125,7 +125,7 @@ def min(
     Returns:
         Tensor: The minimum of all elements in the input tensor.
     """
-    return input.apply_operation(func.Min(input, axis=axis, keepdims=keepdims))
+    return func.Min.forward(input, axis=axis, keepdims=keepdims)
 
 
 @ensure_input_tensor
@@ -138,7 +138,7 @@ def mean(input: Tensor[T] | ArrayLike | T, *, axis: int | tuple[int, ...] | None
     Returns:
         Tensor: The mean of all elements in the input.
     """
-    return input.apply_operation(func.Mean(input, axis=axis))
+    return func.Mean.forward(input, axis=axis)
 
 
 @ensure_input_tensor
@@ -151,7 +151,7 @@ def tanh(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T
     Returns:
         Tensor: The hyperbolic tangent of all elements in the input.
     """
-    return input.apply_operation(func.Tanh(input), inplace=inplace)
+    return func.Tanh.forward(input, inplace=inplace)
 
 
 @ensure_input_tensor
@@ -164,7 +164,7 @@ def log(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]
     Returns:
         Tensor: The natural logarithm of all elements in the input.
     """
-    return input.apply_operation(func.Log(input), inplace=inplace)
+    return func.Log.forward(input, inplace=inplace)
 
 
 def reshape(input: Tensor[T], shape: tuple[int, ...], *, inplace: bool = False) -> Tensor[T]:
@@ -176,7 +176,7 @@ def reshape(input: Tensor[T], shape: tuple[int, ...], *, inplace: bool = False) 
     Returns:
         Tensor: The reshaped tensor.
     """
-    return input.apply_operation(func.Reshape(input, shape=shape), inplace=inplace)
+    return func.Reshape.forward(input, shape=shape, inplace=inplace)
 
 
 def transpose(input: Tensor[T], *, axes: list[int] | tuple[int, ...] | int | None = None) -> Tensor[T]:
@@ -188,7 +188,7 @@ def transpose(input: Tensor[T], *, axes: list[int] | tuple[int, ...] | int | Non
     Returns:
         Tensor: The transposed tensor
     """
-    return input.apply_operation(operation=func.Transpose(input, axes=axes))
+    return func.Transpose.forward(input, axes=axes)
 
 
 def flatten(input: Tensor[T]) -> Tensor[T]:
@@ -199,7 +199,7 @@ def flatten(input: Tensor[T]) -> Tensor[T]:
     Returns:
         Tensor: The flattened tensor.
     """
-    return input.apply_operation(operation=func.Flatten(input))
+    return func.Flatten.forward(input)
 
 
 def expand_dims(input: Tensor[T], axis: int | list[int] | tuple[int, ...]) -> Tensor[T]:
@@ -211,7 +211,7 @@ def expand_dims(input: Tensor[T], axis: int | list[int] | tuple[int, ...]) -> Te
     Returns:
         Tensor: The expanded tensor.
     """
-    return input.apply_operation(operation=func.ExpandDims(input, axis))
+    return func.ExpandDims.forward(input, axis)
 
 
 @ensure_input_tensor
@@ -225,7 +225,7 @@ def round(input: Tensor[T] | ArrayLike | T, decimals: int = 0, *, inplace: bool 
     Returns:
         Tensor: The rounded tensor.
     """
-    return input.apply_operation(func.Round(input, decimals=decimals), inplace=inplace)
+    return func.Round.forward(input, decimals=decimals, inplace=inplace)
 
 
 @ensure_input_tensor
@@ -239,7 +239,7 @@ def pad(input: Tensor[T] | ArrayLike, pad_width: int | tuple, *, value: T = 0) -
     Returns:
         Tensor: The padded tensor.
     """
-    return input.apply_operation(func.Pad(input, pad_width=pad_width, value=value))
+    return func.Pad.forward(input, pad_width=pad_width, value=value)
 
 
 def compose(tensors: list[Tensor[T]] | tuple[Tensor[T], ...]) -> Tensor[T]:
@@ -252,8 +252,7 @@ def compose(tensors: list[Tensor[T]] | tuple[Tensor[T], ...]) -> Tensor[T]:
     Returns:
         New tensor composed of the tensors.
     """
-    # The tensor used to apply operation doesn't matter, and the first tensor will always exist.
-    return tensors[0].apply_operation(func.Compose(tensors))
+    return func.Compose.forward(*tensors)
 
 
 def cce(predicted: Tensor[T], expected: Tensor[T]) -> Tensor[T]:
@@ -265,7 +264,7 @@ def cce(predicted: Tensor[T], expected: Tensor[T]) -> Tensor[T]:
     Returns:
         Tensor: The categorical cross-entropy loss.
     """
-    return predicted.apply_operation(func.CategoricalCrossentropy(predicted, expected))
+    return func.CategoricalCrossentropy.forward(predicted, expected)
 
 
 @ensure_input_tensor
@@ -279,7 +278,7 @@ def as_strided(input: Tensor[T] | ArrayLike | T, *, shape: tuple[int, ...], stri
     Returns:
         Tensor: The strided tensor.
     """
-    return input.apply_operation(func.As_Strided(input, shape=shape, strides=strides))
+    return func.As_Strided.forward(input, shape=shape, strides=strides)
 
 
 @ensure_input_tensor
@@ -293,4 +292,4 @@ def argmax(input: Tensor[T] | ArrayLike | T, *, axis: SupportsIndex | None = Non
     Returns:
         Tensor: The indices of the maximum values along the specified axis.
     """
-    return input.apply_operation(func.Argmax(input, axis=axis, keepdims=keepdims))
+    return func.Argmax.forward(input, axis=axis, keepdims=keepdims)

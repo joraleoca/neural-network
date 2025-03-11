@@ -1,46 +1,50 @@
-from copy import deepcopy
-
 import cupy as cp
 
 from ..function import Function
-from ... import tensor
+from ... import tensor as t
+from ..context import Context
 
 
 class Transpose(Function):
     """Function that computes the transpose of a tensor."""
 
-    __slots__ = "axes"
-
-    def __init__(self, a: "tensor.Tensor", *, axes: list[int] | tuple[int, ...] | int | None = None) -> None:
-        self.args = (a,)
-        self.axes = axes
-
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
-        a = self.args[0]
-
+    @staticmethod
+    def forward(a: "t.Tensor", axes: "int | tuple[int, ...] | None" = None, *, inplace: bool = False) -> "t.Tensor":
         if inplace:
-            a.data.transpose(self.axes)
+            a.data.transpose(axes)
             return a
 
         xp = cp.get_array_module(a.data)
-        return self._create_output_tensor(xp.transpose(a.data, axes=self.axes))
 
-    def backward(self) -> None:
-        a = self.args[0]
-        grad = self.result.grad
+        out = t.Tensor(
+            xp.transpose(a.data, axes),
+            requires_grad=Function._requires_grad(a),
+            device=Function._select_device(a),
+        )
 
-        if a.requires_grad:
-            grad_axes = None
-            if self.axes is not None:
-                grad_axes = [0] * len(self.axes)
+        if out.requires_grad:
+            ctx = Context(a, result=out, backward_fn=Transpose.backward, axes=axes)
+            out._grad_ctx = ctx
 
-                for i, axis in enumerate(self.axes):
-                     grad_axes[axis] = i
+        return out
 
-            xp = cp.get_array_module(a.data)
-            grad = xp.transpose(grad, grad_axes)
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        a = ctx.args[0]
+        if not a.requires_grad:
+            return
 
-            if a.grad is None:
-                a.grad = deepcopy(grad)
-            else:
-                a.grad += grad.T
+        grad = ctx.result.grad
+        axes = ctx.kwargs["axes"]
+
+        grad_axes = None
+        if axes is not None:
+            grad_axes = [0] * len(axes)
+
+            for i, axis in enumerate(axes):
+                grad_axes[axis] = i
+
+        xp = cp.get_array_module(a.data)
+        grad = xp.transpose(grad, grad_axes)
+
+        a.update_grad(grad)

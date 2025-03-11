@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-from numpy.typing import NDArray, DTypeLike
-
 from .. import tensor as t
 
 
@@ -16,11 +14,7 @@ class Function(ABC):
     result: "t.Tensor"
 
     @abstractmethod
-    def __call__(
-        self,
-        *,
-        inplace: bool = False,
-    ) -> "t.Tensor":
+    def forward(self, *args, inplace: bool = False, **kwargs) -> "t.Tensor":
         """
         Invokes the function with the given arguments.
         """
@@ -33,37 +27,34 @@ class Function(ABC):
         """
         pass
 
-    def _create_output_tensor(self, data: NDArray, dtype: DTypeLike = None) -> "t.Tensor":
+    @staticmethod
+    def _select_device(*args: "t.Tensor") -> str:
         """
-        Creates a tensor as result with the given data.\n
-        It stores the tensor in the result attribute if the operation requires grad.
+        Selects the device to store the result tensor.
 
         Args:
-            data (NDArray): The data to be stored in the tensor.
-            dtype (DTypelike): The data type of the tensor.
+            *args (t.Tensor): The function operands.
 
         Returns:
-            Tensor: The tensor with the given data.
+            str: The device to store the result tensor.
         """
         def_device = t.Tensor.default_device
 
-        for arg in self.args:
+        for arg in args:
             if arg.device == def_device:
-                device = def_device
-                break
-            else:
-                device = arg.device
+                return def_device
 
-        required_grad = t.Tensor.grad and any(arg.requires_grad for arg in self.args)
+        return args[0].device
 
-        out = t.Tensor(
-            data,
-            requires_grad=required_grad,
-            device=device,
-            dtype=dtype,
-        )
+    @staticmethod
+    def _requires_grad(*args: "t.Tensor") -> bool:
+        """
+        Checks if the result tensor requires grad.
 
-        if required_grad:
-            self.result = out
+        Args:
+            *args (t.Tensor): The function operands.
 
-        return out
+        Returns:
+            bool: True if the result tensor requires grad, False otherwise.
+        """
+        return t.Tensor.grad and any(arg.requires_grad for arg in args)

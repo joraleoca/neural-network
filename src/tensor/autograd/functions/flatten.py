@@ -1,32 +1,36 @@
 import cupy as cp
 
 from ..function import Function
-from ... import tensor
+from ... import tensor as t
+from ..context import Context
 
 
 class Flatten(Function):
     """Flatten a tensor."""
 
-    def __init__(self, a: "tensor.Tensor"):
-        self.args = (a,)
-
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
+    @staticmethod
+    def forward(a: "t.Tensor", *, inplace: bool = False) -> "t.Tensor":
         if inplace:
             raise NotImplementedError("Inplace flatten is not supported.")
 
-        a = self.args[0]
+        out = t.Tensor(
+            a.data.flatten(),
+            requires_grad=Function._requires_grad(a),
+            device=Function._select_device(a),
+        )
 
-        return self._create_output_tensor(a.data.flatten())
+        if out.requires_grad:
+            ctx = Context(a, result=out, backward_fn=Flatten.backward)
+            out._grad_ctx = ctx
 
-    def backward(self) -> None:
-        a = self.args[0]
-        grad = self.result.grad
+        return out
+
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        a = ctx.args[0]
 
         if a.requires_grad:
+            grad = ctx.result.grad
             xp = cp.get_array_module(grad)
-            gr = xp.reshape(grad, a.shape)
 
-            if a.grad is None:
-                a.grad = gr
-            else:
-                a.grad += grad.reshape(a.shape)
+            a.update_grad(xp.reshape(grad, a.shape))

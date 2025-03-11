@@ -2,7 +2,8 @@ import cupy as cp
 from src.constants import EPSILON
 
 from ..function import Function
-from ... import tensor
+from ... import tensor as t
+from ..context import Context
 
 
 class CategoricalCrossentropy(Function):
@@ -13,12 +14,9 @@ class CategoricalCrossentropy(Function):
     Also, the autograd does not support jacobian matrix.
     """
 
-    def __init__(self, logits: "tensor.Tensor", expected: "tensor.Tensor"):
-        self.args = (logits, expected)
-
-    def __call__(self, *, inplace: bool = False) -> "tensor.Tensor":
-        predicted, expected = self.args
-        xp = cp.get_array_module(*self.args)
+    @staticmethod
+    def forward(predicted: "t.Tensor", expected: "t.Tensor", *, inplace: bool = False) -> "t.Tensor":
+        xp = cp.get_array_module(predicted.data)
 
         predicted.data = predicted.data.clip(EPSILON, 1 - EPSILON)
         expected.data = expected.data.clip(EPSILON, 1 - EPSILON)
@@ -29,25 +27,27 @@ class CategoricalCrossentropy(Function):
             predicted.data = data
             return predicted
 
-        return self._create_output_tensor(data)
+        out = t.Tensor(
+            data,
+            requires_grad=Function._requires_grad(predicted, expected),
+            device=Function._select_device(predicted, expected),
+        )
 
-    def backward(self) -> None:
-        predicted, expected = self.args
-        grad = self.result.grad.reshape(-1, 1)
+        if out.requires_grad:
+            ctx = Context(predicted, expected, result=out, backward_fn=CategoricalCrossentropy.backward)
+            out._grad_ctx = ctx
+
+        return out
+
+    @staticmethod
+    def backward(ctx: Context) -> None:
+        predicted, expected = ctx.args
+        grad = ctx.result.grad
 
         if predicted.requires_grad:
-            gr = (
-                grad
-                * (predicted.data - expected.data)
-                / (predicted.data * (1 - predicted.data) + EPSILON)
-            )
+            gr = grad * (predicted.data - expected.data) / (predicted.data * (1 - predicted.data) + EPSILON)
 
-            if predicted.grad is None:
-                predicted.grad = gr
-            else:
-                predicted.grad += gr
+            predicted.update_grad(gr)
 
         if expected.requires_grad:
-            raise NotImplementedError(
-                "Backward pass for expected tensor not implemented."
-            )
+            raise NotImplementedError("Backward pass for expected tensor not implemented.")
