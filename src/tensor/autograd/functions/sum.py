@@ -38,13 +38,16 @@ class Sum(Function):
 
         # Handle scalar gradient (from global sum)
         if xp.isscalar(grad) or grad.size == 1 or ctx.kwargs["keepdims"]:
-            gr = grad.reshape(a.shape)
+            gr = xp.broadcast_to(grad, a.shape)
         else:
             # Handle axis-specific sums
             grad_shape = list(a.data.shape)
             axis = ctx.kwargs["axis"]
             if axis is not None:
-                for ax in xp.atleast_1d(axis):
+                if not isinstance(axis, tuple | list):
+                    axis = (axis,)
+
+                for ax in axis:
                     grad_shape[ax] = 1
 
             gr = xp.broadcast_to(grad.reshape(grad_shape), a.shape)

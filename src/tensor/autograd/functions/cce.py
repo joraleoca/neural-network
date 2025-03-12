@@ -42,12 +42,13 @@ class CategoricalCrossentropy(Function):
     @staticmethod
     def backward(ctx: Context) -> None:
         predicted, expected = ctx.args
-        grad = ctx.result.grad
 
         if predicted.requires_grad:
-            gr = grad * (predicted.data - expected.data) / (predicted.data * (1 - predicted.data) + EPSILON)
+            grad = ctx.result.grad.reshape(-1, 1)
 
-            predicted.update_grad(gr)
+            grad = grad * (predicted.data - expected.data) / (predicted.data * (1 - predicted.data) + EPSILON)
+
+            predicted.update_grad(grad)
 
         if expected.requires_grad:
             raise NotImplementedError("Backward pass for expected tensor not implemented.")
