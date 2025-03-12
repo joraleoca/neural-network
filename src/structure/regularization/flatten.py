@@ -32,5 +32,5 @@ class Flatten(Layer):
         return {}
 
     @staticmethod
-    def from_data(data: dict[str, Any] | None = None) -> "Layer":
+    def from_data(data: dict[str, Any] | None = None) -> "Flatten":
         return Flatten()

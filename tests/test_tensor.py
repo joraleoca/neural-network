@@ -209,7 +209,7 @@ class TestTensorShapeOperations:
         """Test reshape operation inplace."""
         tensor = sample_2d_tensor.copy()
 
-        result = tensor.reshape((3, 2))
+        result = tensor.reshape((3, 2), inplace=True)
 
         assert tensor is result, "Result tensor should be the same as input tensor"
         assert result.shape == (3, 2), "Shape should be (3, 2)"
@@ -328,12 +328,11 @@ class TestTensorProperties:
     def test_grad_management(self) -> None:
         """Test gradient management for tensors."""
         tensor = Tensor([1, 2, 3], dtype=np.float32, requires_grad=True)
-        tensor.zero_grad()
         assert tensor.grad is None
 
         tensor.grad = np.zeros_like(tensor.data)
         tensor.zero_grad()
-        assert_grad(tensor, np.zeros_like(tensor.data))
+        assert tensor.grad is None
 
 
 class TestTensorMiscOperations:

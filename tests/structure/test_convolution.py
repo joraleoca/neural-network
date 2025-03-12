@@ -6,6 +6,8 @@ from src.structure import Convolution
 from src.initialization import LeCunNormal, HeNormal
 from src.tensor import Tensor, op
 
+from tests.utils import assert_data
+
 
 class TestConvolution:
     convolution_type: type[Convolution] = Convolution
@@ -105,7 +107,7 @@ class TestConvolution:
         layer3 = self.convolution_type(channels, kernel_shape, initializer=LeCunNormal(), rng=43)
 
         assert layer1.rng != layer3.rng, "RNG should be different for both layers."
-        assert layer1.weights != layer3.weights, "Weights should be different for both layers."
+        assert layer1.weights != layer3.weights.data, "Weights should be different for both layers."
 
     def test_forward_generic(self):
         channels = (16, 8)

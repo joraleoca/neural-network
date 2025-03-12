@@ -2,7 +2,7 @@ from collections import deque
 from collections.abc import MutableSequence
 from contextlib import ContextDecorator
 from graphlib import TopologicalSorter
-from typing import Any, ClassVar, SupportsIndex, TypeVar, Iterable, Callable
+from typing import Any, ClassVar, SupportsIndex, TypeVar, Iterable, Callable, Self
 
 import cupy as cp
 import numpy as np
@@ -191,6 +191,8 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
 
     def __eq__(self, other: ArrayLike) -> bool:
         xp = cp.get_array_module(self.data)
+        if isinstance(other, Tensor):
+            return xp.array_equal(self.data, other.data)
         return xp.array_equal(self.data, other)
 
     def __ne__(self, other: ArrayLike) -> bool:
@@ -389,20 +391,19 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         """
         return func.Min.forward(self, axis=axis, keepdims=keepdims)
 
-    def mean(self, axis: int | tuple[int, ...] | None = None) -> "Tensor[T] | T":
+    def mean(self, axis: int | tuple[int, ...] | None = None, keepdims: bool = False) -> "Tensor[T] | T":
         """
         Computes the mean value of tensor elements over the specified axis.
 
         Args:
-            axis: int | tuple[int, ...] | None, optional
-                Axis or axes along which the mean is computed.
-                The default, axis=None, will find the mean element in the tensor.
+            axis (int | tuple[int, ...] | None): Axis or axes along which the mean is computed.
+            keepdims (bool): If True, the reduced axes are left in the result as dimensions with size one. Default is False.
         Returns:
             Tensor[T] | T:
                 A tensor with the mean value of elements along the specified axis.
                 If no axis is specified, returns the mean element as a scalar.
         """
-        return func.Mean.forward(self, axis=axis)
+        return func.Mean.forward(self, axis=axis, keepdims=keepdims)
 
     def argmax(
         self, *, axis: SupportsIndex | None = None, dtype: DTypeLike = None, out: None = None, keepdims: bool = False
@@ -442,10 +443,11 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         """
         return func.Flatten.forward(self)
 
-    def fill(self, value: Any) -> None:
+    def fill(self, value: Any) -> Self:
         if self.requires_grad:
             raise ValueError("Fill cannot be done when requires_grad is True")
         self.data.fill(value)
+        return self
 
     """Autograd"""
 

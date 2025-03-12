@@ -1,12 +1,22 @@
-from typing import Sequence, SupportsIndex
+from typing import Callable, Sequence, SupportsIndex
 
 import numpy as np
-from numpy.typing import DTypeLike, ArrayLike
+from numpy.typing import ArrayLike, DTypeLike
 
-from .tensor import Tensor, T
 from .autograd import functions as func
 from .autograd import operations as ops
-from .utils import ensure_input_tensor
+from .tensor import T, Tensor
+
+
+def ensure_input_tensor(func: Callable) -> Callable:
+    """Decorator to ensure the input is a Tensor."""
+
+    def wrapper(input, *args, **kwargs) -> Callable:
+        if not isinstance(input, Tensor):
+            input = Tensor(input)
+        return func(input, *args, **kwargs)
+
+    return wrapper
 
 
 def empty(shape: tuple[int, ...], dtype: DTypeLike = None, *, requires_grad: bool = False) -> Tensor:
@@ -61,6 +71,23 @@ def zeros(
     )
 
 
+def ones(shape: tuple[int, ...], dtype: DTypeLike = None, *, requires_grad: bool = False) -> Tensor:
+    """
+    Create a tensor filled with ones.
+    Args:
+        shape (tuple[int, ...]): The shape of the tensor.
+        dtype (DTypeLike): The data type of the output tensor.
+        requires_grad (bool): Flag to enable gradient computation.
+    Returns:
+        Tensor: A tensor filled with ones.
+    """
+    return Tensor(
+        np.ones(shape),
+        dtype=dtype or Tensor.default_dtype,
+        requires_grad=requires_grad,
+    )
+
+
 @ensure_input_tensor
 def exp(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]:
     """
@@ -72,6 +99,19 @@ def exp(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]
         Tensor: The exponential of all elements in the input tensor.
     """
     return ops.Pow.forward(Tensor(np.e, dtype=Tensor.default_dtype), input, inplace=inplace)
+
+
+@ensure_input_tensor
+def sqrt(input: Tensor[T] | ArrayLike | T, *, inplace: bool = False) -> Tensor[T]:
+    """
+    Compute the square root of all elements in the input.
+    Args:
+        input (Tensor): The input data.
+        inplace (bool): Flag to modify the input tensor.
+    Returns:
+        Tensor: The square root of all elements in the input tensor.
+    """
+    return ops.Sqrt.forward(input, inplace=inplace)
 
 
 @ensure_input_tensor
@@ -129,16 +169,19 @@ def min(
 
 
 @ensure_input_tensor
-def mean(input: Tensor[T] | ArrayLike | T, *, axis: int | tuple[int, ...] | None = None) -> Tensor[T]:
+def mean(
+    input: Tensor[T] | ArrayLike | T, *, axis: int | tuple[int, ...] | None = None, keepdims: bool = False
+) -> Tensor[T]:
     """
     Compute the mean of all elements in the input.
     Args:
         input (Tensor | ArrayLike | T): The input data.
         axis (int | tuple[int, ...]): The axis along which the mean is computed.
+        keepdims (bool): Flag to keep the dimensions of the input tensor.
     Returns:
         Tensor: The mean of all elements in the input.
     """
-    return func.Mean.forward(input, axis=axis)
+    return func.Mean.forward(input, axis=axis, keepdims=keepdims)
 
 
 @ensure_input_tensor

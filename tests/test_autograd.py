@@ -3,7 +3,7 @@ import numpy as np
 from src.tensor import Tensor, op
 from src.constants import EPSILON
 
-from .utils import assert_grad
+from .utils import assert_data, assert_grad
 
 
 class TestUnaryOperations:
@@ -407,6 +407,20 @@ class TestFunctionalOperations:
 
         assert_grad(a, expected_grad_a)
 
+    def test_mean_keepdims(self):
+        """Test the backward computation for the mean operation with keepdims=True."""
+
+        a = Tensor([1, 3, 2], dtype=np.float32, requires_grad=True)
+        b = a.mean(keepdims=True)
+
+        assert_data(b, Tensor([2]))
+
+        b.backward()
+
+        expected_grad_a = np.ones_like(a.data) / len(a.data)
+
+        assert_grad(a, expected_grad_a)
+
     def test_mean_backwards(self):
         """Test the backward computation for the mean operation."""
         a = Tensor([1, 3, 2], dtype=np.float32, requires_grad=True)
@@ -423,6 +437,8 @@ class TestFunctionalOperations:
         """Test the backward computation for the mean operation along axis 0."""
         a = Tensor([[1, 4, 3], [2, 3, 5]], dtype=np.float32, requires_grad=True)
         b = a.mean(axis=0)
+
+        assert_data(b, [1.5, 3.5, 4])
 
         b.backward()
 

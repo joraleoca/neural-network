@@ -10,10 +10,7 @@ from src.tensor import Tensor, T
 class Dropout(Layer):
     """Dropout layer."""
 
-    __slots__ = [
-        "p",
-        "rng",
-    ]
+    __slots__ = "p", "rng"
 
     p: float
 
@@ -28,7 +25,7 @@ class Dropout(Layer):
             p: The dropout rate.
             rng: The random number generator.
         """
-        if not 0 <= p < 1:
+        if 0 > p > 1:
             raise ValueError(f"The dropout rate must be between 0 and 1. Got {p}.")
 
         self.p = p
@@ -38,7 +35,7 @@ class Dropout(Layer):
         if not data.requires_grad or self.p == 0:
             return data
 
-        if self.p < 0 or self.p > 1:
+        if 0 > self.p > 1:
             raise ValueError("The dropout probability must be between 0 and 1.")
 
         mask = Tensor(self.rng.binomial(1, 1 - self.p, size=data.shape) / (1 - self.p), dtype=data.dtype)
@@ -51,7 +48,5 @@ class Dropout(Layer):
         }
 
     @staticmethod
-    def from_data(data: dict[str, Any]) -> "Layer":
+    def from_data(data: dict[str, Any]) -> "Dropout":
         return Dropout(data["p"].item())
-
-

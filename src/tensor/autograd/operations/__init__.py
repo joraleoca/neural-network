@@ -11,6 +11,7 @@ from .pow import Pow
 from .abs import Abs
 from .matmul import Matmul
 from .indexing import Index
+from .sqrt import Sqrt
 
 
-__all__ = "Neg", "Add", "Sub", "Mul", "Div", "Pow", "Abs", "Matmul", "Index"
+__all__ = "Neg", "Add", "Sub", "Mul", "Div", "Pow", "Abs", "Matmul", "Index", "Sqrt"
