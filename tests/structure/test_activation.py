@@ -3,7 +3,7 @@ import numpy as np
 
 from tests.utils import assert_data, assert_grad
 from src.tensor import Tensor
-from src.structure import LeakyRelu, Relu, Sigmoid, Softmax, Tanh, layer_from_name
+from src.structure import LeakyRelu, Relu, Sigmoid, Softmax, Tanh
 
 
 class TestActivation:
@@ -71,23 +71,3 @@ class TestSoftmax:
         assert_data(output, expected_output)
 
     # Softmax backwards is not implemented
-
-
-class TestActivationUtils:
-    @pytest.mark.parametrize(
-        "name, class_type",
-        [
-            (Relu.__name__, Relu),
-            (LeakyRelu.__name__, LeakyRelu),
-            (Sigmoid.__name__, Sigmoid),
-            (Tanh.__name__, Tanh),
-            (Softmax.__name__, Softmax),
-        ],
-    )
-    def test_activation_from_name(self, name, class_type):
-        assert layer_from_name(name) == class_type
-
-    @pytest.mark.parametrize("invalid_name", ["activation_test", "relu", "", "Unknown"])
-    def test_activation_from_name_error(self, invalid_name):
-        with pytest.raises(ValueError):
-            layer_from_name(invalid_name)

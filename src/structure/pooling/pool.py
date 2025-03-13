@@ -1,5 +1,4 @@
 from abc import ABC
-from typing import ClassVar, Any
 
 from numpy import generic as np_generic
 from numpy.typing import NDArray
@@ -23,8 +22,6 @@ class Pool(Layer, ABC):
     filter_shape: tuple[int, int]
     stride: int
     padding: int
-
-    required_fields: ClassVar[tuple[str, ...]] = ("channels", "filter_shape", "stride", "padding")
 
     def __init__(
         self,
@@ -50,13 +47,12 @@ class Pool(Layer, ABC):
             raise ValueError(f"The stride value must be positive. Got {stride}")
         if padding < 0:
             raise ValueError(f"The padding value must be non-negative. Got {padding}")
-        
+
         if isinstance(filter_shape, int):
             filter_shape = (filter_shape, filter_shape)
-        
+
         if any(i <= 0 for i in filter_shape):
             raise ValueError(f"The filter shape must be positive. Got {filter_shape}")
-
 
         self.channels = channels
         self.filter_shape = filter_shape
@@ -88,14 +84,14 @@ class Pool(Layer, ABC):
         """
         pad_width = ((0, 0), (0, 0), (self.padding, self.padding), (self.padding, self.padding))
         return op.pad(data, pad_width, value=const_val)
-    
+
     def _windows(self, data: Tensor) -> NDArray:
         """
         Extract the sliding windows from the input tensor.
 
         Args:
             data (NDArray): The input tensor from which the windows are extracted.
-        
+
         Returns:
             NDArray: The sliding windows extracted from the input tensor.
         """
@@ -127,16 +123,7 @@ class Pool(Layer, ABC):
             tuple[int, ...]: A tuple representing the height and width of the output.
         """
         output_size: tuple[int, ...] = tuple(
-            ((d - self.filter_shape[-1 - i] + 2 * self.padding) // self.stride) + 1
-            for i, d in enumerate(input_size)
+            ((d - self.filter_shape[-1 - i] + 2 * self.padding) // self.stride) + 1 for i, d in enumerate(input_size)
         )
 
         return output_size
-
-    def data_to_store(self) -> dict[str, Any]:
-        return {
-            "channels": self.channels,
-            "filter_shape": self.filter_shape,
-            "stride": self.stride,
-            "padding": self.padding,
-        }

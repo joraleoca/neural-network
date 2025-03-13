@@ -1,5 +1,3 @@
-from typing import Any
-
 import numpy as np
 
 from .pool import Pool
@@ -13,12 +11,3 @@ class AveragePool(Pool):
         windows = self._windows(data)
 
         return op.mean(windows, axis=(-1, -2))
-
-    @staticmethod
-    def from_data(data: dict[str, Any]) -> "AveragePool":
-        return AveragePool(
-            channels=data["channels"].item(),
-            filter_shape=tuple(data["filter_shape"]),
-            stride=data["stride"].item(),
-            padding=data["padding"].item()
-        )

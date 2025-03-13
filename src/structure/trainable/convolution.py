@@ -1,11 +1,10 @@
-from typing import ClassVar, Any
+from typing import Any
 
 import numpy as np
 
 from .trainable import Trainable
 from src.tensor import Tensor, op
 from src.initialization import Initializer, HeUniform
-import src.constants as c
 
 
 class Convolution(Trainable):
@@ -26,13 +25,6 @@ class Convolution(Trainable):
 
     stride: int
     padding: int
-
-    required_fields: ClassVar[tuple[str, ...]] = (
-        c.WEIGHT_PREFIX,
-        c.BIAS_PREFIX,
-        "stride",
-        "padding",
-    )
 
     def __init__(
         self,
@@ -185,26 +177,3 @@ class Convolution(Trainable):
     def output_dim(self) -> int:
         """Returns the number of output channels of the layer."""
         return self._out_channels
-
-    def data_to_store(self) -> dict[str, Any]:
-        return {
-            c.WEIGHT_PREFIX: self.weights or None,
-            c.BIAS_PREFIX: self.biases or None,
-            "stride": self.stride or None,
-            "padding": self.padding or None,
-        }
-
-    @staticmethod
-    def from_data(data: dict[str, Any]) -> "Convolution":
-        weights = data[c.WEIGHT_PREFIX]
-        out_channels, in_channels, kernel_height, kernel_width = weights.shape
-
-        layer = Convolution(
-            (in_channels, out_channels), (kernel_height, kernel_width), stride=data["stride"], padding=data["padding"]
-        )
-
-        layer._in_channels = in_channels
-        layer.weights = Tensor(weights)
-        layer.biases = Tensor(data[c.BIAS_PREFIX])
-
-        return layer

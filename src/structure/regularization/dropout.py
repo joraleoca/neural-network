@@ -1,4 +1,4 @@
-from typing import Any, ClassVar
+from typing import Any
 
 import numpy as np
 from numpy.random import Generator
@@ -15,8 +15,6 @@ class Dropout(Layer):
     p: float
 
     rng: Generator
-
-    required_fields: ClassVar[tuple[str, ...]] = ("p",)
 
     def __init__(self, p: float = 0.0, rng: Any = None) -> None:
         """
@@ -41,12 +39,3 @@ class Dropout(Layer):
         mask = Tensor(self.rng.binomial(1, 1 - self.p, size=data.shape) / (1 - self.p), dtype=data.dtype)
 
         return data * mask
-
-    def data_to_store(self) -> dict[str, Any]:
-        return {
-            "p": self.p,
-        }
-
-    @staticmethod
-    def from_data(data: dict[str, Any]) -> "Dropout":
-        return Dropout(data["p"].item())

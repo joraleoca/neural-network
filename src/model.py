@@ -1,14 +1,17 @@
+import os
 from abc import ABC, abstractmethod
-from typing import Callable
 from pathlib import Path
+from typing import Callable, ClassVar
 
 import numpy as np
+
+from src.structure import Layer
 
 from . import constants as c
 from .tensor import Tensor
 
 
-class BaseModel(ABC):
+class BaseModel(Layer, ABC):
     """
     Base class for all network models.
     """
@@ -16,6 +19,8 @@ class BaseModel(ABC):
     __slots__ = "layers"
 
     layers: list[Callable[[Tensor], Tensor]]
+
+    required_fields: ClassVar[tuple[str, ...]] = ("layers",)
 
     @abstractmethod
     def __call__(self, inputs: Tensor[np.floating]) -> Tensor[np.floating]:
@@ -38,7 +43,7 @@ class BaseModel(ABC):
         """
         return [param for layer in self.layers if hasattr(layer, "parameters") for param in layer.parameters()]
 
-    # TODO: Fix this method with the new structure
+    # TODO: Make a better implementation of the store_params and load_params methods, this is just a workaround, not prioritary
     def store_params(self, file: str | Path = c.FILE_NAME) -> None:
         """
         Store the weights and biases of the neural network to a file.
@@ -46,21 +51,23 @@ class BaseModel(ABC):
         Args:
             file (str | Path): The file path to store the weights and biases.
         """
-        kwds = {}
+        np.save(file, np.array(self, dtype=object))
 
-        structure = []
+    def load_params(self, path: str | os.PathLike | Path = c.FILE_NAME):
+        if not isinstance(path, Path):
+            path = Path(path)
 
-        for i, layer in enumerate(self.layers):
-            structure.append(f"{layer.__class__.__name__} {i}")
+        if not path.exists():
+            raise FileNotFoundError(f"File {path} not found.")
+        if path.suffix != ".npy":
+            raise ValueError(f"Path must be a numpy .npz file. Got {path.suffix}")
+        if not os.access(path, os.R_OK):
+            raise ValueError(f"File {path} is not readable.")
 
-            layer_data = layer.data_to_store()
-
-            for key, val in layer_data.items():
-                kwds[f"{key} {i}"] = val
-
-        kwds[c.STRUCTURE_STR] = np.array(structure, dtype=str)
-
-        np.savez(file, **kwds)
+        try:
+            self.layers = np.load(path, allow_pickle=True).item().layers
+        except Exception as e:
+            raise RuntimeError(f"Error loading parameters: {e}")
 
     @staticmethod
     def plot_metrics(

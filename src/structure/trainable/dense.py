@@ -1,8 +1,7 @@
-from typing import Any, ClassVar
+from typing import Any
 
 import numpy as np
 
-import src.constants as c
 from src.tensor import Tensor, op
 from src.initialization import Initializer, XavierUniform
 
@@ -16,8 +15,6 @@ class Dense(Trainable):
 
     _in_features: int
     _out_features: int
-
-    required_fields: ClassVar[tuple[str, ...]] = (c.WEIGHT_PREFIX, c.BIAS_PREFIX)
 
     def __init__(
         self,
@@ -92,22 +89,3 @@ class Dense(Trainable):
     def output_dim(self) -> int:
         """Returns the number of output features of the layer."""
         return self._out_features
-
-    def data_to_store(self) -> dict[str, Any]:
-        return {
-            c.WEIGHT_PREFIX: self.weights or None,
-            c.BIAS_PREFIX: self.biases or None,
-        }
-
-    @staticmethod
-    def from_data(data: dict[str, Any]) -> "Dense":
-        weights = data[c.WEIGHT_PREFIX]
-        in_features, out_features = weights.shape
-
-        layer = Dense(out_features)
-
-        layer._in_features = in_features
-        layer.weights = Tensor(weights)
-        layer.biases = Tensor(data[c.BIAS_PREFIX])
-
-        return layer

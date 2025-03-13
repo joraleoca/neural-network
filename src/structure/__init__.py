@@ -8,8 +8,6 @@ from .pooling import Pool, MaxPool, AveragePool
 from .regularization import Dropout, Flatten
 from .activation import ActivationFunction, Relu, LeakyRelu, Sigmoid, Softmax, Tanh
 
-from .utils import layer_from_name
-
 __all__ = (
     "Layer",
     "Trainable",
@@ -21,7 +19,6 @@ __all__ = (
     "AveragePool",
     "Dropout",
     "Flatten",
-    "layer_from_name",
     "ActivationFunction",
     "Relu",
     "LeakyRelu",

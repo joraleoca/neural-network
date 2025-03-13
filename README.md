@@ -44,73 +44,8 @@ pip install -r requirements.txt
 - Pandas - if you want to work with DataFrame inputs
 
 ## Usage
-
-Here's a basic example of how to use the neural network:
-
-```python
-from src import NeuralNetwork, Config
-from src.tensor import Tensor
-from src.config import FeedForwardConfig, TrainingConfig
-from src.loss import CategoricalCrossentropy
-from src.structure import Dense, LeakyRelu, Softmax
-
-# Set the default device for all tensor operations, including those created internally by the neural network
-Config.set_default_device("cuda")
-
-# Prepare your data as numpy arrays
-X_train = Tensor(...)  # Your training data
-y_train = Tensor(...)  # Your training labels
-
-X_test = Tensor(...)  # Your testing data
-y_test = Tensor(...)  # Your testing labels
-
-classes = ("class1", "class2", "class3")
-
-config = FeedForwardConfig(
-    network_structure=[
-        Dense(X_train.shape[1]), 
-        LeakyRelu(),
-        Dense(64),
-        LeakyRelu(),
-        Dense(32),
-        LeakyRelu(),
-        Dense(len(classes)),
-        Softmax(),
-    ],
-    classes=classes,
-)
-
-# Initialize the neural network
-nn = NeuralNetwork(config)
-
-# Train the model
-nn.train(
-    X_train,
-    y_train,
-    X_test,
-    y_test,
-    config=TrainingConfig(
-        loss=CategoricalCrossentropy()
-    ),
-)
-
-# Make prediction for a single data point
-prediction = nn.forward_pass(X_test[0])
-```
-
-### Example with Pandas (Optional)
-```python
-import pandas as pd
-import numpy as np
-from src import NeuralNetwork
-
-# If using pandas
-data = pd.read_csv('your_dataset.csv')
-X = data.drop('target', axis=1).to_numpy()  # Convert to numpy array
-y = data['target'].to_numpy()  # Convert to numpy array
-```
-
-**See the usage example file for more details. You need to install the example dependencies to run the example:**
+To see how the library works, check out the **usage example folder**.
+You need to install the example dependencies to run the example:
 
 ```bash
 pip install -r requirements.example.txt

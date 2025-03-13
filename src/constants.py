@@ -2,7 +2,7 @@
 EPSILON = 1e-7
 
 # Parameter file default name
-FILE_NAME = "params.npz"
+FILE_NAME = "params.npy"
 
 # Parameter file constants
 STRUCTURE_STR = "structure"
