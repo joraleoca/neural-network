@@ -1,10 +1,9 @@
 import numpy as np
 
-from src.core import Tensor
-from src.core.tensor import op
+from src.tensor import Tensor, op
 from src.constants import EPSILON
 
-from .utils import assert_grad
+from .utils import assert_data, assert_grad
 
 
 class TestUnaryOperations:
@@ -57,9 +56,9 @@ class TestBinaryOperations:
         assert_grad(a, np.ones_like(a))
         assert_grad(b, np.sum(np.ones_like(a)))
 
-        a.clear_grad()
-        b.clear_grad()
-        c.clear_grad()
+        a.zero_grad()
+        b.zero_grad()
+        c.zero_grad()
 
         c = b + a
 
@@ -92,9 +91,9 @@ class TestBinaryOperations:
         assert_grad(a, b.data)
         assert_grad(b, np.sum(a.data))
 
-        a.clear_grad()
-        b.clear_grad()
-        c.clear_grad()
+        a.zero_grad()
+        b.zero_grad()
+        c.zero_grad()
 
         c = b * a
 
@@ -127,9 +126,9 @@ class TestBinaryOperations:
         assert_grad(a, np.ones_like(a))
         assert_grad(b, -np.sum(np.ones_like(a)))
 
-        a.clear_grad()
-        b.clear_grad()
-        c.clear_grad()
+        a.zero_grad()
+        b.zero_grad()
+        c.zero_grad()
 
         c = b - a
 
@@ -162,9 +161,9 @@ class TestBinaryOperations:
         assert_grad(a, 1 / b.data)
         assert_grad(b, np.sum(-a.data / (b.data**2)))
 
-        a.clear_grad()
-        b.clear_grad()
-        c.clear_grad()
+        a.zero_grad()
+        b.zero_grad()
+        c.zero_grad()
 
         c = b / a
 
@@ -218,9 +217,9 @@ class TestBinaryOperations:
         assert_grad(a, expected_grad_a)
         assert_grad(b, expected_grad_b)
 
-        a.clear_grad()
-        b.clear_grad()
-        c.clear_grad()
+        a.zero_grad()
+        b.zero_grad()
+        c.zero_grad()
 
         c = b**a
 
@@ -408,6 +407,20 @@ class TestFunctionalOperations:
 
         assert_grad(a, expected_grad_a)
 
+    def test_mean_keepdims(self):
+        """Test the backward computation for the mean operation with keepdims=True."""
+
+        a = Tensor([1, 3, 2], dtype=np.float32, requires_grad=True)
+        b = a.mean(keepdims=True)
+
+        assert_data(b, Tensor([2]))
+
+        b.backward()
+
+        expected_grad_a = np.ones_like(a.data) / len(a.data)
+
+        assert_grad(a, expected_grad_a)
+
     def test_mean_backwards(self):
         """Test the backward computation for the mean operation."""
         a = Tensor([1, 3, 2], dtype=np.float32, requires_grad=True)
@@ -425,6 +438,8 @@ class TestFunctionalOperations:
         a = Tensor([[1, 4, 3], [2, 3, 5]], dtype=np.float32, requires_grad=True)
         b = a.mean(axis=0)
 
+        assert_data(b, [1.5, 3.5, 4])
+
         b.backward()
 
         expected_grad_a = 1 / a.data.shape[0]
@@ -433,9 +448,7 @@ class TestFunctionalOperations:
 
     def test_mean_backward_axis_0_1(self):
         """Test the backward computation for the mean operation along axis 1.2."""
-        a = Tensor(
-            [[1, 4, 3], [2, 3, 5], [6, 7, 8]], dtype=np.float32, requires_grad=True
-        )
+        a = Tensor([[1, 4, 3], [2, 3, 5], [6, 7, 8]], dtype=np.float32, requires_grad=True)
         b = a.mean(axis=(0, 1))
 
         b.backward()

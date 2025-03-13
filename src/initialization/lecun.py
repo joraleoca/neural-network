@@ -2,7 +2,7 @@ import numpy as np
 from numpy.random import Generator
 
 from .initialization import Uniform, Normal
-from src.core import Tensor
+from src.tensor import Tensor
 
 
 class LeCunUniform(Uniform):

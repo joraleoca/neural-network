@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 from numpy.random import Generator
 
-from src.core import Tensor, Config
+from src.tensor import Tensor
 
 
 class Initializer(ABC):
@@ -65,7 +65,7 @@ class Normal(Initializer, ABC):
 
         MEAN = 0
 
-        return Tensor(rng.normal(MEAN, std, shape), requires_grad=requires_grad, dtype=Config.default_dtype)
+        return Tensor(rng.normal(MEAN, std, shape), requires_grad=requires_grad, dtype=Tensor.default_dtype)
 
 
 class Uniform(Initializer, ABC):
@@ -94,4 +94,4 @@ class Uniform(Initializer, ABC):
         """
         rng = np.random.default_rng(rng)
 
-        return Tensor(rng.uniform(-bound, bound, shape), requires_grad=requires_grad, dtype=Config.default_dtype)
+        return Tensor(rng.uniform(-bound, bound, shape), requires_grad=requires_grad, dtype=Tensor.default_dtype)

@@ -1,4 +1,3 @@
-from .neural_network import NeuralNetwork
-from .core import Config
+from .model import BaseModel
 
-__all__ = "NeuralNetwork", "Config"
+__all__ = ("BaseModel",)

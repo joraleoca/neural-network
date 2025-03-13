@@ -3,8 +3,7 @@ from typing import Final
 import numpy as np
 
 from .encoder import Encoder
-from src.core import Tensor
-from ..core.tensor import op
+from src.tensor import Tensor, op
 
 
 class OneHotEncoder[T](Encoder):
@@ -16,33 +15,34 @@ class OneHotEncoder[T](Encoder):
 
     _label_to_index: Final[dict[T, int]]
 
-    def __init__(self, classes: tuple[T, ...]):
+    def __init__(self, labels: tuple[T, ...]):
         """
-        Initializes the one-hot encoder with the given classes.
+        Initializes the one-hot encoder with the given labels.
         Args:
-            classes (tuple[T, ...]): A tuple of class labels.
+            labels (tuple[T, ...]): A tuple of class labels.
         """
-        super().__init__(classes)
-        self._label_to_index = {c: i for i, c in enumerate(classes)}
+        super().__init__(labels)
+        self._label_to_index = {c: i for i, c in enumerate(labels)}
 
-    def encode(self, label: T) -> Tensor[np.floating]:
+    def encode(self, labels: Tensor) -> Tensor[np.floating]:
         """
         Encodes a given label into a one-hot encoded numpy array.
 
         Args:
-            label (T): The label to be encoded.
+            label (Tensor): Tensor of labels to be encoded.
         Returns:
             Tensor[np.floating]: A one-hot encoded numpy array representing the label.
         Raises:
-            ValueError: If the label is not found in the predefined classes.
+            ValueError: If the label is not found in the predefined labels.
         """
-        if label not in self._label_to_index:
-            raise ValueError(f"Label is not in classes. Got {label}")
+        index = [self._label_to_index.get(label.item()) for label in labels]
 
-        encode = op.zeros((len(self._label_to_index.keys()),))
-        encode[self._label_to_index[label]] = 1
+        if None in index:
+            raise ValueError("Label not found in predefined labels.")
 
-        return encode
+        out = op.zeros((len(labels), len(self.labels)))
+        out[range(len(labels)), index] = 1
+        return out
 
     def decode(self, encoded: Tensor[np.floating] | Tensor[np.integer]) -> T:
         """
@@ -54,4 +54,4 @@ class OneHotEncoder[T](Encoder):
         Returns:
             T: The class label corresponding to the highest value in the encoded array.
         """
-        return self.classes[int(op.argmax(encoded).item())]
+        return self.labels[int(op.argmax(encoded).item())]

@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 
 *.npz
+*.npy
 .ipynb_checkpoints/
 
 dev_test.py

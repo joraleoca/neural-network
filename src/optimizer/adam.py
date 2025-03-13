@@ -1,85 +1,52 @@
-from dataclasses import dataclass, field
-
 import numpy as np
 
-from src.core import Tensor
 import src.constants as c
-from src.core import op
+from src.tensor import Tensor, op
+from src.scheduler import Scheduler
+
 from .optimizer import Optimizer
 
 
-@dataclass(slots=True)
 class Adam(Optimizer):
     """Adam optimizer."""
 
-    b1: float = field(default=0.9)
-    b2: float = field(default=0.999)
+    __slots__ = "b1", "b2", "_m", "_v", "_t"
 
-    mw: list[Tensor[np.floating]] = field(init=False, default_factory=list)
-    vw: list[Tensor[np.floating]] = field(init=False, default_factory=list)
+    b1: float
+    b2: float
 
-    mb: list[Tensor[np.floating]] = field(init=False, default_factory=list)
-    vb: list[Tensor[np.floating]] = field(init=False, default_factory=list)
+    _m: list[Tensor[np.floating]]
+    _v: list[Tensor[np.floating]]
 
-    _tw: int = field(init=False, default=0)
-    _tb: int = field(init=False, default=0)
+    _t: int
 
-    def __post_init__(self):
-        if not (0 <= self.b1 < 1) or not (0 <= self.b2 < 1):
-            raise ValueError(
-                "The betas must be between 0 (inclusive) and 1 (exclusive)"
-            )
+    def __init__(self, parameters: list[Tensor], lr: Scheduler | float, b1: float = 0.9, b2: float = 0.999) -> None:
+        if not (0 <= b1 < 1) or not (0 <= b2 < 1):
+            raise ValueError(f"The betas must be between 0 (inclusive) and 1 (exclusive). Got b1: {b1} and b2: {b2}")
 
-    def _optimize_weights(self, lr: float, weights: list[Tensor], gradients: list[Tensor]) -> None:
-        self._tw += 1
-        self._optimize(lr, weights, gradients, self._tw, self.mw, self.vw)
+        super().__init__(parameters, lr)
 
-    def _optimize_biases(
-            self,
-            lr: float,
-            biases: list[Tensor],
-            gradients: list[Tensor],
-    ) -> None:
-        self._tb += 1
-        self._optimize(lr, biases, gradients, self._tb, self.mb, self.vb)
+        self.b1, self.b2 = b1, b2
+        self._t = 0
 
-    def _optimize(
-            self,
-            lr: float,
-            params: list[Tensor],
-            gradients: list[Tensor],
-            t: float,
-            m: list[Tensor[np.floating]],
-            v: list[Tensor[np.floating]],
-    ) -> None:
-        """
-        Optimize the parameters based on their gradients.
+        self._m = []
+        self._v = []
 
-        Args:
-            lr: learning rate.
-            params: parameters to optimize.
-            gradients: gradients to optimize.
-            t: t of those params
-            m: m of those params
-            v: v of those params
-        """
-        if not m or not v:
-            m[:] = [op.zeros_like(g, requires_grad=False) for g in gradients]
-            v[:] = [op.zeros_like(g, requires_grad=False) for g in gradients]
+    def _optimize(self, lr: float) -> None:
+        if not self._m or not self._v:
+            self._m = [op.zeros_like(param) for param in self._params]
+            self._v = [op.zeros_like(param) for param in self._params]
 
-        for m_i, v_i, g in zip(m, v, gradients):
-            m_i *= self.b1
-            m_i += (1 - self.b1) * g
-            
-            v_i *= self.b2
-            v_i += (1 - self.b2) * g**2
+        self._t += 1
 
-        lr *= np.sqrt(1 - self.b2**t) / (1 - self.b1**t)
+        for m, v, param in zip(self._m, self._v, self._params):
+            m *= self.b1
+            v *= self.b2
 
-        update = [lr * m_i / (np.sqrt(v_i) + c.EPSILON) for m_i, v_i in zip(m, v)]
+            m += (1 - self.b1) * param.grad  # type: ignore
+            v += (1 - self.b2) * param.grad**2  # type: ignore
 
-        for i, upd in enumerate(update):
-            # Done this way to avoid creating new tensors using in-place operation
-            params[i].requires_grad = False
-            params[i] -= upd
-            params[i].requires_grad = True
+        lr *= np.sqrt(1 - self.b2**self._t) / (1 - self.b1**self._t)
+
+        for param, m, v in zip(self._params, self._m, self._v):
+            param -= lr * m / (np.sqrt(v) + c.EPSILON)

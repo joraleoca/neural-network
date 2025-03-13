@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from src.encode import Encoder
-from src.core import Tensor
+from src.tensor import Tensor
 
 
 class Loss(ABC):

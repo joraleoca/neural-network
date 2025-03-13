@@ -1,10 +1,11 @@
 import numpy as np
 
-from .loss import Loss
-from src.core import Tensor
 import src.constants as c
-from ..core.tensor import op
-from src.encode import Encoder, BinaryEncoder
+from src.tensor import Tensor
+from src.encode import BinaryEncoder, Encoder
+
+from src.tensor import op
+from .loss import Loss
 
 
 class BinaryCrossentropy(Loss):
@@ -14,13 +15,11 @@ class BinaryCrossentropy(Loss):
 
     def __call__(
         self,
-        expected: Tensor[np.floating],
         predicted: Tensor[np.floating],
+        expected: Tensor[np.floating],
     ) -> Tensor[np.floating]:
         if isinstance(expected, Tensor) and expected.shape != predicted.shape:
-            raise ValueError(
-                f"Shape mismatch: expected {expected.shape}, got {predicted.shape}"
-            )
+            raise ValueError(f"Shape mismatch: expected {expected.shape}, got {predicted.shape}")
 
         predicted.data = np.clip(predicted.data, c.EPSILON, 1 - c.EPSILON)
 
