@@ -436,12 +436,21 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
 
     def flatten(self) -> "Tensor[T]":
         """
-        Return a new Tensor with the same data but as an 1D array.
+        Return a new Tensor with the same data but as an 1D array. A copy is made.
 
         Returns:
             Tensor: A new 1D tensor.
         """
         return func.Flatten.forward(self)
+
+    def ravel(self) -> "Tensor[T]":
+        """
+        Return a new Tensor with the same data but as an 1D array. A view is made.
+
+        Returns:
+            Tensor: A new 1D tensor.
+        """
+        return func.Ravel.forward(self)
 
     def fill(self, value: Any) -> Self:
         if self.requires_grad:
@@ -519,20 +528,22 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         """
         graph = TopologicalSorter()
         graph.add(self._grad_ctx)
-        to_visit: deque[Tensor] = deque([self])
+        to_visit: deque[Context] = deque([self._grad_ctx])  # type: ignore
+        visited: set[Context] = set()
 
         while to_visit:
-            tensor: Tensor = to_visit.popleft()
+            ctx = to_visit.popleft()
 
-            if not tensor._grad_ctx:
+            if ctx is None or ctx in visited:
                 continue
 
-            for t in tensor._grad_ctx.args:
-                if t._grad_ctx:
-                    graph.add(t._grad_ctx, tensor._grad_ctx)
-                    to_visit.append(t)
+            for t in ctx.args:
+                t_ctx = t._grad_ctx
+                if t_ctx is not None:
+                    graph.add(t_ctx, ctx)
+                    to_visit.append(t_ctx)
 
-            tensor._grad_ctx = None
+            visited.add(ctx)
 
         return graph
 

@@ -34,11 +34,11 @@ class Matmul(Function):
         grad = cp.get_array_module(grad).atleast_2d(grad)
 
         if a.requires_grad:
-            gr = grad @ cp.get_array_module(b.data).atleast_2d(b.data).T
+            gr = grad @ cp.get_array_module(b.data).atleast_2d(b.data).swapaxes(-1, -2)
 
             a.update_grad(gr)
 
         if b.requires_grad:
-            gr = cp.get_array_module(a.data).atleast_2d(a.data).T @ grad
+            gr = cp.get_array_module(a.data).atleast_2d(a.data).swapaxes(-1, -2) @ grad
 
             b.update_grad(gr)

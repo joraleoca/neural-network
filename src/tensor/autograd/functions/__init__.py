@@ -11,10 +11,11 @@ from .log import Log
 from .reshape import Reshape
 from .transpose import Transpose
 from .flatten import Flatten
+from .ravel import Ravel
 from .expand_dims import ExpandDims
 from .round import Round
 from .pad import Pad
-from .compose import Compose
+from .stack import Stack
 from .cce import CategoricalCrossentropy
 from .as_strided import As_Strided
 from .argmax import Argmax
@@ -29,10 +30,11 @@ __all__ = (
     "Reshape",
     "Transpose",
     "Flatten",
+    "Ravel",
     "ExpandDims",
     "Round",
     "Pad",
-    "Compose",
+    "Stack",
     "CategoricalCrossentropy",
     "As_Strided",
     "Argmax",

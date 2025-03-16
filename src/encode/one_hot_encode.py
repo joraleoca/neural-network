@@ -35,16 +35,16 @@ class OneHotEncoder[T](Encoder):
         Raises:
             ValueError: If the label is not found in the predefined labels.
         """
-        index = [self._label_to_index.get(label.item()) for label in labels]
+        out = []
 
-        if None in index:
-            raise ValueError("Label not found in predefined labels.")
+        for label in labels.ravel():
+            one_hot = op.zeros((len(self._label_to_index),))
+            one_hot[self._label_to_index[label.item()]] = 1
+            out.append(one_hot)
 
-        out = op.zeros((len(labels), len(self.labels)))
-        out[range(len(labels)), index] = 1
-        return out
+        return op.stack(out).reshape(labels.shape + (len(self._label_to_index),))
 
-    def decode(self, encoded: Tensor[np.floating] | Tensor[np.integer]) -> T:
+    def decode(self, encoded: Tensor[np.floating] | Tensor[np.integer]) -> Tensor:
         """
         Decodes a one-hot encoded numpy array to its corresponding class label.
         The encoded can also be a probabilities vector.
@@ -54,4 +54,5 @@ class OneHotEncoder[T](Encoder):
         Returns:
             T: The class label corresponding to the highest value in the encoded array.
         """
-        return self.labels[int(op.argmax(encoded).item())]
+        index = op.flatten(op.argmax(encoded, axis=-1))
+        return Tensor([self.labels[i.item()] for i in index], dtype=type(self.labels[0]))

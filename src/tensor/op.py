@@ -285,9 +285,9 @@ def pad(input: Tensor[T] | ArrayLike, pad_width: int | tuple, *, value: T = 0) -
     return func.Pad.forward(input, pad_width=pad_width, value=value)
 
 
-def compose(tensors: list[Tensor[T]] | tuple[Tensor[T], ...]) -> Tensor[T]:
+def stack(tensors: list[Tensor[T]] | tuple[Tensor[T], ...], axis: int = 0) -> Tensor[T]:
     """
-    Compose the tensors.\n
+    Stack the tensors.\n
     The created tensor propagates the gradient through the tensors.
     Args:
         *tensors: List of tensors.
@@ -295,7 +295,7 @@ def compose(tensors: list[Tensor[T]] | tuple[Tensor[T], ...]) -> Tensor[T]:
     Returns:
         New tensor composed of the tensors.
     """
-    return func.Compose.forward(*tensors)
+    return func.Stack.forward(*tensors, axis=axis)
 
 
 def cce(predicted: Tensor[T], expected: Tensor[T]) -> Tensor[T]:

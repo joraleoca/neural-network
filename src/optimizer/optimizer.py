@@ -17,7 +17,7 @@ class Optimizer(ABC):
     lr: Scheduler | float
     _params: list[Tensor]
 
-    MAX_DELTA_NORM: float = 5.0
+    MAX_DELTA_NORM: float = 1.0
 
     def __init__(self, params: list[Tensor], lr: Scheduler | float) -> None:
         """
