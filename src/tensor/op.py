@@ -1,5 +1,6 @@
-from typing import Callable, Sequence, SupportsIndex
+from typing import Callable, Sequence, SupportsIndex, Any
 
+import cupy as cp
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
 
@@ -32,7 +33,7 @@ def empty(shape: tuple[int, ...], dtype: DTypeLike = None, *, requires_grad: boo
     return Tensor(np.empty(shape), dtype=dtype or Tensor.default_dtype, requires_grad=requires_grad)
 
 
-def zeros_like(arr: Tensor[T], dtype: DTypeLike = None, *, requires_grad: bool = False) -> Tensor[T]:
+def zeros_like(arr: Tensor, dtype: DTypeLike = None, *, requires_grad: bool = False) -> Tensor:
     """
     Create a tensor filled with zeros with the same shape and dtype as the input tensor.
     Args:
@@ -336,3 +337,45 @@ def argmax(input: Tensor[T] | ArrayLike | T, *, axis: SupportsIndex | None = Non
         Tensor: The indices of the maximum values along the specified axis.
     """
     return func.Argmax.forward(input, axis=axis, keepdims=keepdims)
+
+
+@ensure_input_tensor
+def relu(input: Tensor[T] | ArrayLike | T) -> Tensor[T]:
+    return input * (input > 0)
+
+
+@ensure_input_tensor
+def leaky_relu(input: Tensor[T] | ArrayLike | T, alpha: float) -> Tensor[T]:
+    if alpha < 0:
+        raise ValueError(f"Alpha must be non-negative. Got {alpha}.")
+
+    xp = cp.get_array_module(input.data)
+    return input * xp.where(input > 0, xp.ones((1,), dtype=input.dtype), xp.array([alpha], dtype=input.dtype))
+
+
+@ensure_input_tensor
+def sigmoid(input: Tensor[T] | ArrayLike | T) -> Tensor[T]:
+    return 1 / (1 + exp(-input))
+
+
+@ensure_input_tensor
+def softmax(input: Tensor[T] | ArrayLike | T) -> Tensor[T]:
+    exp_shifted = exp(input - max(input, axis=-1, keepdims=True))
+    softmax = exp_shifted / sum(exp_shifted, axis=-1, keepdims=True)
+
+    return softmax
+
+
+@ensure_input_tensor
+def dropout(input: Tensor[T] | ArrayLike | T, p: float, *, rng: Any) -> Tensor[T]:
+    if not (0 <= p <= 1):
+        raise ValueError("The dropout probability must be between 0 and 1.")
+
+    if p == 0:
+        return input
+
+    xp = cp.get_array_module(input.data)
+
+    mask = Tensor(xp.random.default_rng(rng).binomial(1, 1 - p, size=input.shape) / (1 - p), dtype=input.dtype)
+
+    return input * mask

@@ -11,12 +11,12 @@ class Layer(ABC):
     @abstractmethod
     def __call__(
         self,
-        data: Tensor[np.floating],
+        *args: Tensor[np.floating],
     ) -> Tensor[np.floating]:
         """
         Forward pass of the layer.
         Args:
-            data (Tensor): The input data to the layer.
+            args (*Tensor): The input data to the layer.
         Returns:
             Tensor: The output of the layer.
         """

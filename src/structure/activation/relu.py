@@ -1,5 +1,5 @@
 from .activation import ActivationFunction
-from src.tensor import Tensor, T
+from src.tensor import Tensor, T, op
 
 
 class Relu(ActivationFunction):
@@ -10,4 +10,4 @@ class Relu(ActivationFunction):
     """
 
     def __call__(self, arr: Tensor[T]) -> Tensor[T]:
-        return arr * (arr > 0)
+        return op.relu(arr)
