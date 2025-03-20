@@ -4,6 +4,7 @@ import cupy as cp
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
 
+from src.constants import EPSILON
 from .autograd import functions as func
 from .autograd import operations as ops
 from .tensor import T, Tensor
@@ -379,3 +380,34 @@ def dropout(input: Tensor[T] | ArrayLike | T, p: float, *, rng: Any) -> Tensor[T
     mask = Tensor(xp.random.default_rng(rng).binomial(1, 1 - p, size=input.shape) / (1 - p), dtype=input.dtype)
 
     return input * mask
+
+
+def dotproduct_attention(
+    queries: Tensor[T],
+    keys: Tensor[T],
+    values: Tensor[T],
+    attention_mask: Tensor | None = None,
+    dropout_p: float = 0,
+    *,
+    rng: Any = None,
+) -> Tensor[T]:
+    """
+    Computes the dot-product attention.
+
+    Args:
+        queries (Tensor[T]): The query tensor of shape (batch size, num queries, d).
+        keys (Tensor[T]): The key tensor of shape (batch size, num key-value pairs, d).
+        values (Tensor[T]): The value tensor of shape (batch size, num key-value pairs, d).
+        attention_mask (Tensor, optional): The mask tensor of shape (batch size,) or (batch size, num queries).
+        dropout_p (float, optional): The probability of dropping out elements. Default is 0.
+        rng (Any, optional): Random number generator for dropout. Default is None.
+
+    Returns:
+        Tensor[T]: The result of the attention mechanism applied to the values tensor.
+    """
+    scores = (queries @ transpose(keys, axes=(1, 2))) / sqrt(queries.shape[-1])
+
+    if attention_mask is not None:
+        attention_weights = scores + attention_mask * EPSILON
+
+    return dropout(softmax(attention_weights), dropout_p, rng=rng) @ values

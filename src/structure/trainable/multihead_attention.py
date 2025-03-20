@@ -8,13 +8,12 @@ from src.initialization import Initializer, XavierUniform
 
 from .trainable import Trainable
 from .dense import Dense
-from ..regularization import DotProductAttention
 
 
 class MultiHeadAttention(Trainable):
     """MultiHeadAttention layer in a neural network."""
 
-    __slots__ = "hidden_features", "num_heads", "W_o", "W_q", "W_k", "W_v", "attention"
+    __slots__ = "hidden_features", "num_heads", "W_o", "W_q", "W_k", "W_v", "dropout_p"
 
     def __init__(
         self,
@@ -50,7 +49,7 @@ class MultiHeadAttention(Trainable):
         self.W_k = Dense(hidden_features, initializer, rng=rng)
         self.W_q = Dense(hidden_features, initializer, rng=rng)
         self.W_v = Dense(hidden_features, initializer, rng=rng)
-        self.attention = DotProductAttention(dropout_p, rng)
+        self.dropout_p = dropout_p
 
     def __call__(
         self,
@@ -67,7 +66,7 @@ class MultiHeadAttention(Trainable):
             xp = cp.get_array_module(mask.data)
             mask = Tensor(xp.repeat(mask, self.num_heads, axis=0), dtype=mask.dtype)
 
-        out = self.attention(queries, keys, values, mask)
+        out = op.dotproduct_attention(queries, keys, values, mask, self.dropout_p, rng=self.rng)
 
         # Reverse the _transpose_qkv operation
         out = out.reshape((-1, self.num_heads, *queries.shape[1:]))
