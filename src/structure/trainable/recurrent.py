@@ -74,11 +74,3 @@ class Recurrent(Trainable):
             [weights, internal_weights, biases]
         """
         return [self.weights, self._internal_weights, self.biases]
-
-    @property
-    def input_dim(self) -> int:
-        return self._features
-
-    @property
-    def output_dim(self) -> int:
-        return self.hidden_features

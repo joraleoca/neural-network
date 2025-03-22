@@ -8,14 +8,15 @@ from src.tensor import Tensor, op
 def test_constructor_out_features():
     layer = Dense(10)
 
-    assert layer.output_dim == 10, f"Output features should be 10. Got {layer.output_dim}."
+    assert layer.out_features == 10, f"Output features should be 10. Got {layer.out_features}."
 
 
 def test_constructor_features():
-    layer = Dense((10, 100))
+    features = (10, 100)
+    layer = Dense(features)
 
-    assert layer.input_dim == 10, f"Input features should be 10. Got {layer.input_dim}."
-    assert layer.output_dim == 100, f"Output features should be 100. Got {layer.output_dim}."
+    assert layer.in_features == 10, f"Input features should be {features[0]}. Got {layer.in_features}."
+    assert layer.out_features == 100, f"Output features should be {features[1]}. Got {layer.out_features}."
 
 
 @pytest.mark.parametrize(
@@ -65,10 +66,11 @@ def test_initializer(initializer):
 
 
 def test_weights_initializated():
-    layer = Dense((10, 100), initializer=LeCunNormal())
+    features = (10, 100)
+    layer = Dense(features, initializer=LeCunNormal())
 
     assert hasattr(layer, "weights"), "Weights should be initialized."
-    assert layer.weights.shape == (10, 100), f"Weights shape should be (10, 100). Got {layer.weights.shape}."
+    assert layer.weights.shape == features, f"Weights shape should be {features}. Got {layer.weights.shape}."
 
 
 def test_induced_input_dim_and_weight_initializate():
@@ -76,7 +78,7 @@ def test_induced_input_dim_and_weight_initializate():
 
     layer(Tensor([[1, 2, 3]]))
 
-    assert layer.input_dim == 3, f"Input features should be 3. Got {layer.input_dim}."
+    assert layer.in_features == 3, f"Input features should be 3. Got {layer.in_features}."
     assert hasattr(layer, "weights"), "Weights should be initialized."
     assert layer.weights.shape == (3, 10), f"Weights shape should be (3, 10). Got {layer.weights.shape}."
 

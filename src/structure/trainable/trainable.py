@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any
 
 import numpy as np
@@ -62,15 +62,3 @@ class Trainable(Layer, ABC):
         """Clears the gradients of the weights and biases."""
         self.weights.zero_grad()
         self.biases.zero_grad()
-
-    @property
-    @abstractmethod
-    def input_dim(self) -> int:
-        """Returns the number of input features of the layer."""
-        pass
-
-    @property
-    @abstractmethod
-    def output_dim(self) -> int:
-        """Returns the number of output features of the layer."""
-        pass

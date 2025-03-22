@@ -33,29 +33,16 @@ class BatchNorm(Trainable):
         if not data.requires_grad:
             data = data - self.mean / op.sqrt(self.var)
         else:
-            assert len(data.shape) in (2, 4), "BatchNorm is only supported for Dense and Convolutional layers."
-
-            if len(data.shape) == 2:
+            if len(data.shape) == 4:
+                mean = data.mean(axis=(0, 2, 3), keepdims=True)
+                var = ((data - mean) ** 2).mean(axis=(0, 1, 2), keepdims=True)
+            else:
                 mean = data.mean(axis=0)
                 var = ((data - mean) ** 2).mean(axis=0)
-            else:
-                mean = data.mean(axis=(0, 2, 3), keepdims=True)
-                var = ((data - mean) ** 2).mean(axis=(0, 2, 3), keepdims=True)
 
             data = (data - mean) / op.sqrt(var)
 
-            self.mean *= 1 - self.momentum
-            self.mean += mean * self.momentum
-
-            self.var *= 1 - self.momentum
-            self.var += var * self.momentum
+            self.mean = self.mean * (1 - self.momentum) + mean * self.momentum
+            self.var = self.var * (1 - self.momentum) + var * self.momentum
 
         return self.weights * data + self.biases
-
-    @property
-    def input_dim(self) -> int:
-        return self.mean.shape[1]
-
-    @property
-    def output_dim(self) -> int:
-        return self.mean.shape[1]

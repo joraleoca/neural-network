@@ -7,5 +7,17 @@ from .dense import Dense
 from .convolution import Convolution
 from .batchnorm import BatchNorm
 from .recurrent import Recurrent
+from .multihead_attention import MultiHeadAttention
+from .transformer import TransformerEncoder, TransformerDecoder, TransformerEncoderBlock
 
-__all__ = "Trainable", "Dense", "Convolution", "BatchNorm", "Recurrent"
+__all__ = (
+    "Trainable",
+    "Dense",
+    "Convolution",
+    "BatchNorm",
+    "Recurrent",
+    "MultiHeadAttention",
+    "TransformerEncoder",
+    "TransformerDecoder",
+    "TransformerEncoderBlock",
+)

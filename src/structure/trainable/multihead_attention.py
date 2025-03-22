@@ -1,6 +1,5 @@
 from typing import Any
 
-import cupy as cp
 import numpy as np
 
 from src.tensor import Tensor, op
@@ -35,11 +34,6 @@ class MultiHeadAttention(Trainable):
         Raises:
             ValueError: If any features is incorrect.
         """
-        if hidden_features % num_heads != 0:
-            raise ValueError(
-                f"The hidden features must be a multiple of num_heads. Got {hidden_features=} and {num_heads=}"
-            )
-
         super().__init__(initializer, rng=rng)
 
         self.hidden_features = hidden_features
@@ -56,20 +50,19 @@ class MultiHeadAttention(Trainable):
         queries: Tensor[np.floating],
         keys: Tensor[np.floating],
         values: Tensor[np.floating],
-        mask: Tensor[np.floating] | None = None,
+        valid_lens: Tensor[np.floating] | None = None,
     ) -> Tensor[np.floating]:
         queries = self._transpose_qkv(self.W_q(queries))
         keys = self._transpose_qkv(self.W_k(keys))
         values = self._transpose_qkv(self.W_v(values))
 
-        if mask is not None:
-            xp = cp.get_array_module(mask.data)
-            mask = Tensor(xp.repeat(mask, self.num_heads, axis=0), dtype=mask.dtype)
+        if valid_lens is not None:
+            valid_lens = op.repeat(valid_lens, self.num_heads, axis=0)
 
-        out = op.dotproduct_attention(queries, keys, values, mask, self.dropout_p, rng=self.rng)
+        out = op.dotproduct_attention(queries, keys, values, valid_lens, self.dropout_p, rng=self.rng)
 
         # Reverse the _transpose_qkv operation
-        out = out.reshape((-1, self.num_heads, *queries.shape[1:]))
+        out = out.reshape((-1, self.num_heads, out.shape[1], out.shape[2]))
         out = op.transpose(out, axes=(0, 2, 1, 3))
         out = out.reshape((out.shape[0], out.shape[1], -1))
 
@@ -80,9 +73,9 @@ class MultiHeadAttention(Trainable):
         Receives an arr of shape (batch size, num of queries, num hiddens) and returns
         the same arr with shape (batch size * num of heads, num queries, num hiddens / num of heads)
         """
-        arr = arr.reshape(arr.shape[0:1] + (self.num_heads, -1))
+        arr = arr.reshape(arr.shape[0:2] + (self.num_heads, -1))
         arr = op.transpose(arr, axes=(0, 2, 1, 3))
-        return arr.reshape((-1,) + arr.shape[2:3])
+        return arr.reshape((-1,) + arr.shape[2:])
 
     def parameters(self) -> list[Tensor]:
         """
@@ -91,11 +84,3 @@ class MultiHeadAttention(Trainable):
             list[Tensor]: The parameters of the layer.
         """
         return self.W_o.parameters() + self.W_k.parameters() + self.W_q.parameters() + self.W_v.parameters()
-
-    @property
-    def input_dim(self) -> int:
-        return self.hidden_features
-
-    @property
-    def output_dim(self) -> int:
-        return self.hidden_features

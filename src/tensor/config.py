@@ -67,3 +67,13 @@ class _ConfigMeta(ABCMeta):
             grad: Whether to compute the gradients.
         """
         cls._grad = grad
+
+    @property
+    def default_module(cls):
+        match cls.default_device:
+            case Device.CUDA:
+                return cp
+            case Device.CPU:
+                return np
+            case _:
+                raise ValueError(f"Invalid default device in Tensor configuration. Got {cls.default_device}")

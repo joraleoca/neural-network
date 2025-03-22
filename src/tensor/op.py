@@ -4,10 +4,9 @@ import cupy as cp
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
 
-from src.constants import EPSILON
 from .autograd import functions as func
 from .autograd import operations as ops
-from .tensor import T, Tensor
+from .tensor import Tensor, T
 
 
 def ensure_input_tensor(func: Callable) -> Callable:
@@ -31,7 +30,7 @@ def empty(shape: tuple[int, ...], dtype: DTypeLike = None, *, requires_grad: boo
     Returns:
         Tensor: A tensor of given shape.
     """
-    return Tensor(np.empty(shape), dtype=dtype or Tensor.default_dtype, requires_grad=requires_grad)
+    return Tensor(Tensor.default_module.empty(shape), dtype=dtype or Tensor.default_dtype, requires_grad=requires_grad)
 
 
 def zeros_like(arr: Tensor, dtype: DTypeLike = None, *, requires_grad: bool = False) -> Tensor:
@@ -45,7 +44,7 @@ def zeros_like(arr: Tensor, dtype: DTypeLike = None, *, requires_grad: bool = Fa
         Tensor: A tensor filled with zeros with the same shape and dtype as the input tensor.
     """
     return Tensor(
-        np.zeros_like(arr.data),
+        Tensor.default_module.zeros_like(arr.data),
         dtype=dtype or arr.dtype,
         requires_grad=requires_grad,
     )
@@ -67,7 +66,7 @@ def zeros(
         Tensor: A tensor filled with zeros.
     """
     return Tensor(
-        np.zeros(shape),
+        Tensor.default_module.zeros(shape),
         dtype=dtype or Tensor.default_dtype,
         requires_grad=requires_grad,
     )
@@ -84,7 +83,7 @@ def ones(shape: tuple[int, ...], dtype: DTypeLike = None, *, requires_grad: bool
         Tensor: A tensor filled with ones.
     """
     return Tensor(
-        np.ones(shape),
+        Tensor.default_module.ones(shape),
         dtype=dtype or Tensor.default_dtype,
         requires_grad=requires_grad,
     )
@@ -341,6 +340,23 @@ def argmax(input: Tensor[T] | ArrayLike | T, *, axis: SupportsIndex | None = Non
 
 
 @ensure_input_tensor
+def repeat(input: Tensor[T] | ArrayLike | T, repeats: int, axis: SupportsIndex | None = None) -> Tensor[T]:
+    """
+    Repeat the input tensor.
+    Args:
+        input (Tensor): The input tensor.
+        repeats (int): The number of repetitions.
+        axis (SupportsIndex | None): The axis along which the repetition is computed.
+    Returns:
+        Tensor: The repeated tensor.
+    Notes:
+        Backward computation is not supported.
+    """
+    xp = cp.get_array_module(input.data)
+    return Tensor(xp.repeat(input.data, repeats, axis=axis), dtype=input.dtype)
+
+
+@ensure_input_tensor
 def relu(input: Tensor[T] | ArrayLike | T) -> Tensor[T]:
     return input * (input > 0)
 
@@ -368,7 +384,7 @@ def softmax(input: Tensor[T] | ArrayLike | T) -> Tensor[T]:
 
 
 @ensure_input_tensor
-def dropout(input: Tensor[T] | ArrayLike | T, p: float, *, rng: Any) -> Tensor[T]:
+def dropout(input: Tensor[T] | ArrayLike | T, p: float, *, rng: Any = None) -> Tensor[T]:
     if not (0 <= p <= 1):
         raise ValueError("The dropout probability must be between 0 and 1.")
 
@@ -386,7 +402,7 @@ def dotproduct_attention(
     queries: Tensor[T],
     keys: Tensor[T],
     values: Tensor[T],
-    attention_mask: Tensor | None = None,
+    valid_lens: Tensor | None = None,
     dropout_p: float = 0,
     *,
     rng: Any = None,
@@ -398,16 +414,23 @@ def dotproduct_attention(
         queries (Tensor[T]): The query tensor of shape (batch size, num queries, d).
         keys (Tensor[T]): The key tensor of shape (batch size, num key-value pairs, d).
         values (Tensor[T]): The value tensor of shape (batch size, num key-value pairs, d).
-        attention_mask (Tensor, optional): The mask tensor of shape (batch size,) or (batch size, num queries).
+        valid_lens (Tensor, optional): The valid lengths tensor as (batch size,) or (batch size, num queries).
         dropout_p (float, optional): The probability of dropping out elements. Default is 0.
         rng (Any, optional): Random number generator for dropout. Default is None.
 
     Returns:
         Tensor[T]: The result of the attention mechanism applied to the values tensor.
     """
-    scores = (queries @ transpose(keys, axes=(1, 2))) / sqrt(queries.shape[-1])
+    scores: Tensor = queries @ transpose(keys, axes=(*range(0, keys.ndim - 2), -1, -2)) / sqrt(queries.shape[-1])
 
-    if attention_mask is not None:
-        attention_weights = scores + attention_mask * EPSILON
+    if valid_lens is not None:
+        xp = cp.get_array_module(scores.data)
 
-    return dropout(softmax(attention_weights), dropout_p, rng=rng) @ values
+        filter = expand_dims(valid_lens, -1) > xp.arange(scores.shape[1])
+
+        if valid_lens.ndim == 1:
+            filter = expand_dims(Tensor(filter), -1)
+
+        scores = scores * filter
+
+    return dropout(softmax(scores), dropout_p, rng=rng) @ values

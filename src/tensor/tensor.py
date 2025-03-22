@@ -77,7 +77,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
     def __len__(self) -> int:
         return len(self.data)
 
-    def __getitem__(self, idx) -> "Tensor[T] | T":
+    def __getitem__(self, idx) -> "Tensor[T]":
         return op.Index.forward(self, idx, inplace=False)
 
     def __setitem__(self, idx, value) -> None:

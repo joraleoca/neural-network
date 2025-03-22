@@ -9,7 +9,7 @@ class PositionalEncoding(Layer):
 
     __slots__ = "P", "dropout_p"
 
-    def __init__(self, num_hiddens: int, max_len: int, dropout_p: float = 0) -> None:
+    def __init__(self, num_hiddens: int, max_len: int = 1000, dropout_p: float = 0) -> None:
         """
         Initializes the PositionalEncoding class.
 
