@@ -27,7 +27,11 @@ class CategoricalCrossentropy(Function):
         data = xp.sum(data, axis=-1)
 
         if inplace:
-            # TODO: implement ignore_token_id here
+            if ignore_token_id is not None:
+                mask = expected.data.argmax(axis=-1) != ignore_token_id
+                data = data * mask
+                data = data.sum() / (mask.sum() + EPSILON)
+
             predicted.data = data
             return predicted
 
@@ -38,12 +42,17 @@ class CategoricalCrossentropy(Function):
         )
 
         if out.requires_grad:
-            ctx = Context(predicted, expected, result=out, backward_fn=CategoricalCrossentropy.backward)
+            ctx = Context(
+                predicted,
+                expected,
+                result=out,
+                backward_fn=CategoricalCrossentropy.backward,
+                ignore_token_id=ignore_token_id,
+            )
             out._grad_ctx = ctx
 
         if ignore_token_id is not None:
             mask = expected.data.argmax(axis=-1) != ignore_token_id
-
             out = out * mask
             out = out.sum() / (mask.sum() + EPSILON)
 
