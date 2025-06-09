@@ -15,15 +15,23 @@ class CategoricalCrossentropy(Function):
     """
 
     @staticmethod
-    def forward(predicted: "t.Tensor", expected: "t.Tensor", *, inplace: bool = False) -> "t.Tensor":
+    def forward(
+        predicted: "t.Tensor", expected: "t.Tensor", *, ignore_token_id: int | None = None, inplace: bool = False
+    ) -> "t.Tensor":
         xp = cp.get_array_module(predicted.data)
 
         predicted.data = predicted.data.clip(EPSILON, 1 - EPSILON)
         expected.data = expected.data.clip(EPSILON, 1 - EPSILON)
 
-        data = -xp.sum(expected.data * xp.log(predicted.data), axis=-1)
+        data = -expected.data * xp.log(predicted.data)
+        data = xp.sum(data, axis=-1)
 
         if inplace:
+            if ignore_token_id is not None:
+                mask = expected.data.argmax(axis=-1) != ignore_token_id
+                data = data * mask
+                data = data.sum() / (mask.sum() + EPSILON)
+
             predicted.data = data
             return predicted
 
@@ -34,8 +42,19 @@ class CategoricalCrossentropy(Function):
         )
 
         if out.requires_grad:
-            ctx = Context(predicted, expected, result=out, backward_fn=CategoricalCrossentropy.backward)
+            ctx = Context(
+                predicted,
+                expected,
+                result=out,
+                backward_fn=CategoricalCrossentropy.backward,
+                ignore_token_id=ignore_token_id,
+            )
             out._grad_ctx = ctx
+
+        if ignore_token_id is not None:
+            mask = expected.data.argmax(axis=-1) != ignore_token_id
+            out = out * mask
+            out = out.sum() / (mask.sum() + EPSILON)
 
         return out
 

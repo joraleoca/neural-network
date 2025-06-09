@@ -59,16 +59,6 @@ class Pool(Layer, ABC):
         self.stride = stride
         self.padding = padding
 
-    @property
-    def input_dim(self) -> int:
-        """Returns the number of input channels of the layer."""
-        return self.channels
-
-    @property
-    def output_dim(self) -> int:
-        """Returns the number of output channels of the layer."""
-        return self.channels
-
     def _pad[T: np_generic](self, data: Tensor[T], const_val: T) -> Tensor[T]:
         """
         Pad the input tensor with the specified padding value.

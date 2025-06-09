@@ -33,20 +33,20 @@ def min_max_scaler(
 
 
 def train_test_split(
-    data: Tensor | NDArray,
-    expected: Tensor | NDArray,
+    data: Tensor | list,
+    expected: Tensor | list,
     *,
     train_size: int | float | None = None,
     test_size: int | float | None = None,
     shuffle: bool = True,
     rng: Any = None,
-) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+) -> tuple[list, list, list, list]:
     """
     Split the data into random train and test subsets.
 
     Args:
-        data (Tensor): The data to be split.
-        expected (Tensor): The expected output corresponding to the data.
+        data (Tensor | list): The data to be split.
+        expected (Tensor | list): The expected output corresponding to the data.
         train_size (int, float, or None, optional):
             If int, represents the absolute number of train samples.
             If float, represents the proportion of the dataset to include in the train split.
@@ -58,16 +58,11 @@ def train_test_split(
         rng (Any): Controls the shuffling applied to the data before applying the split. Default is None.
 
     Returns:
-        tuple[Tensor, Tensor, Tensor, Tensor]: The split data (data_train, expected_train, data_test, expected_test).
+        tuple[list, list, list, list]: The split data (data_train, expected_train, data_test, expected_test).
 
     ValueError: If `train_size` and `test_size` do not sum up to the number of samples in `data`.
     TypeError: If `train_size` or `test_size` are not int, float, or None.
     """
-    if not isinstance(data, Tensor):
-        data = Tensor(data)
-    if not isinstance(expected, Tensor):
-        expected = Tensor(expected, dtype=expected.dtype)
-
     n_samples = len(data)
 
     if train_size is None and test_size is None:
@@ -104,11 +99,11 @@ def train_test_split(
         xp.random.default_rng(rng).shuffle(index)
 
     slice_ = index[:train_count]
-    train_data = data[slice_]
-    train_expected = expected[slice_]
+    train_data = [data[idx] for idx in slice_]
+    train_expected = [expected[idx] for idx in slice_]
 
     slice_ = index[train_count : train_count + test_count]
-    test_data = data[slice_]
-    test_expected = expected[slice_]
+    test_data = [data[idx] for idx in slice_]
+    test_expected = [expected[idx] for idx in slice_]
 
     return train_data, train_expected, test_data, test_expected

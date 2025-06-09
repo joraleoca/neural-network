@@ -11,7 +11,4 @@ class Softmax(ActivationFunction):
     """
 
     def __call__(self, arr: Tensor[T]) -> Tensor[T]:
-        exp_shifted = op.exp(arr - op.max(arr, axis=-1, keepdims=True))
-        softmax = exp_shifted / op.sum(exp_shifted, axis=-1, keepdims=True)
-
-        return softmax
+        return op.softmax(arr)

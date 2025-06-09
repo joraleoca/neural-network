@@ -1,7 +1,5 @@
-import cupy as cp
-
 from .activation import ActivationFunction
-from src.tensor import Tensor, T
+from src.tensor import Tensor, T, op
 
 
 class LeakyRelu(ActivationFunction):
@@ -34,5 +32,4 @@ class LeakyRelu(ActivationFunction):
         self.ALPHA = alpha
 
     def __call__(self, arr: Tensor[T]) -> Tensor[T]:
-        xp = cp.get_array_module(arr.data)
-        return arr * xp.where(arr > 0, xp.ones((1,), dtype=arr.dtype), xp.array([self.ALPHA], dtype=arr.dtype))
+        return op.leaky_relu(arr, self.ALPHA)

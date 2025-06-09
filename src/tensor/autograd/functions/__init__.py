@@ -16,9 +16,12 @@ from .expand_dims import ExpandDims
 from .round import Round
 from .pad import Pad
 from .stack import Stack
+from .concat import Concat
 from .cce import CategoricalCrossentropy
 from .as_strided import As_Strided
 from .argmax import Argmax
+from .where import Where
+from .triu import Triu
 
 __all__ = (
     "Max",
@@ -35,7 +38,10 @@ __all__ = (
     "Round",
     "Pad",
     "Stack",
+    "Concat",
     "CategoricalCrossentropy",
     "As_Strided",
     "Argmax",
+    "Where",
+    "Triu",
 )

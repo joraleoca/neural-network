@@ -1,10 +1,9 @@
 # Neural Network Implementation
 
-A simple implementation of a neural network from scratch in Python for classification problems. This project provides a basic neural network class that can be used with different datasets.
+A simple implementation of a neural network from scratch in Python. This project provides a basic neural network class that can be used with different datasets.
 
 ## Features
 
-- Feed-forward neural network implementation
 - Flexible architecture that can work with various datasets
 - Automatic differentiation using autograd for gradient computation
 - Data visualization capabilities

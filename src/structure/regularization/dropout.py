@@ -1,10 +1,7 @@
 from typing import Any
 
-import numpy as np
-from numpy.random import Generator
-
 from ..layer import Layer
-from src.tensor import Tensor, T
+from src.tensor import Tensor, T, op
 
 
 class Dropout(Layer):
@@ -14,7 +11,7 @@ class Dropout(Layer):
 
     p: float
 
-    rng: Generator
+    rng: Any
 
     def __init__(self, p: float = 0.0, rng: Any = None) -> None:
         """
@@ -23,19 +20,14 @@ class Dropout(Layer):
             p: The dropout rate.
             rng: The random number generator.
         """
-        if 0 > p > 1:
+        if not (0 <= p <= 1):
             raise ValueError(f"The dropout rate must be between 0 and 1. Got {p}.")
 
         self.p = p
-        self.rng = np.random.default_rng(rng)
+        self.rng = rng
 
     def __call__(self, data: Tensor[T]) -> Tensor[T]:
-        if not data.requires_grad or self.p == 0:
+        if not Tensor.training or self.p == 0:
             return data
 
-        if 0 > self.p > 1:
-            raise ValueError("The dropout probability must be between 0 and 1.")
-
-        mask = Tensor(self.rng.binomial(1, 1 - self.p, size=data.shape) / (1 - self.p), dtype=data.dtype)
-
-        return data * mask
+        return op.dropout(data, self.p, rng=self.rng)

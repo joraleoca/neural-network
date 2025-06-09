@@ -6,13 +6,14 @@ from src.tensor import Tensor, op
 from src.initialization import Initializer, XavierUniform
 
 from ..activation import ActivationFunction, Tanh
+from ..parameter import Parameter
 from .trainable import Trainable
 
 
 class Recurrent(Trainable):
     """Recurrent layer in a neural network."""
 
-    __slots__ = "activation", "hidden_features", "_features", "_internal_weights"
+    __slots__ = "weights", "biases", "activation", "hidden_features", "_features", "_internal_weights"
 
     def __init__(
         self,
@@ -34,20 +35,20 @@ class Recurrent(Trainable):
         Raises:
             ValueError: If any features is incorrect.
         """
-        super().__init__(initializer, rng=rng)
+        super().__init__(rng=rng)
 
         self._features = features
         self.hidden_features = hidden_features
         self.activation = activation
 
-        self.weights = initializer.initialize((features, hidden_features), requires_grad=self.requires_grad, rng=rng)
-        self.biases.set_data(op.zeros((1, hidden_features)))
-
-        self._internal_weights = initializer.initialize(
-            (hidden_features, hidden_features), requires_grad=self.requires_grad, rng=rng
+        self.weights = Parameter(
+            initializer.initialize((features, hidden_features), requires_grad=self.requires_grad, rng=rng)
         )
+        self.biases = Parameter(op.zeros((1, hidden_features)))
 
-        self._initializer = None
+        self._internal_weights = Parameter(
+            initializer.initialize((hidden_features, hidden_features), requires_grad=self.requires_grad, rng=rng)
+        )
 
     def __call__(self, data: Tensor[np.floating], state: Tensor[np.floating] | None = None) -> Tensor[np.floating]:
         batch_size, seq_len, features = data.shape
@@ -65,20 +66,3 @@ class Recurrent(Trainable):
             out.append(state)
 
         return op.stack(out, axis=1)
-
-    def parameters(self) -> list[Tensor]:
-        """Returns the parameters of the layer
-        Returns:
-            list[Tensor]: The parameters of the layer.
-
-            [weights, internal_weights, biases]
-        """
-        return [self.weights, self._internal_weights, self.biases]
-
-    @property
-    def input_dim(self) -> int:
-        return self._features
-
-    @property
-    def output_dim(self) -> int:
-        return self.hidden_features

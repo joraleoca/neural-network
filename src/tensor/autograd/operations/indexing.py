@@ -18,9 +18,7 @@ class Index(Function):
             raise ValueError("Index cannot be inplace.")
 
         out = t.Tensor(
-            a.data[idx],
-            requires_grad=Function._requires_grad(a),
-            device=Function._select_device(a),
+            a.data[idx], requires_grad=Function._requires_grad(a), device=Function._select_device(a), dtype=a.dtype
         )
 
         if out.requires_grad:

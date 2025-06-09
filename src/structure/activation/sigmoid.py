@@ -10,4 +10,4 @@ class Sigmoid(ActivationFunction):
     """
 
     def __call__(self, arr: Tensor[T]) -> Tensor[T]:
-        return 1 / (1 + op.exp(-arr))
+        return op.sigmoid(arr)

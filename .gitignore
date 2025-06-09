@@ -9,3 +9,4 @@ __pycache__/
 .ipynb_checkpoints/
 
 dev_test.py
+/examples/spa.txt

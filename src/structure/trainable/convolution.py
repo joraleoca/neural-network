@@ -2,6 +2,7 @@ from typing import Any
 
 import numpy as np
 
+from ..parameter import Parameter
 from .trainable import Trainable
 from src.tensor import Tensor, op
 from src.initialization import Initializer, HeUniform
@@ -11,15 +12,20 @@ class Convolution(Trainable):
     """Convolution layer in a neural network."""
 
     __slots__ = (
-        "_in_channels",
-        "_out_channels",
+        "weights",
+        "biases",
+        "in_channels",
+        "out_channels",
         "kernel_shape",
         "stride",
         "padding",
+        "_initializer",
     )
 
-    _in_channels: int
-    _out_channels: int
+    weights: Parameter
+    biases: Parameter
+    in_channels: int
+    out_channels: int
 
     kernel_shape: tuple[int, int]
 
@@ -56,29 +62,29 @@ class Convolution(Trainable):
         if len(kernel_shape) != 2:
             raise ValueError(f"The kernel size must have 2 dimension. Got {len(kernel_shape)}")
 
-        super().__init__(initializer, rng=rng)
+        super().__init__(rng=rng)
         self.kernel_shape = kernel_shape
         self.stride = stride
         self.padding = padding
+        self._initializer = initializer
+        self.weights = Parameter([])
 
         if isinstance(channels, tuple):
-            self._in_channels, self._out_channels = channels
+            self.in_channels, self.out_channels = channels
 
-            if self._in_channels <= 0 or self._out_channels <= 0:
-                raise ValueError(
-                    f"The channels must be positive. Got in: {self._in_channels}, out: {self._out_channels}"
-                )
+            if self.in_channels <= 0 or self.out_channels <= 0:
+                raise ValueError(f"The channels must be positive. Got in: {self.in_channels}, out: {self.out_channels}")
 
             self._initializate_weights()
         else:
-            self._out_channels = channels
+            self.out_channels = channels
 
-            if self._out_channels <= 0:
-                raise ValueError(f"The out channels must be positive. Got {self._out_channels}")
+            if self.out_channels <= 0:
+                raise ValueError(f"The out channels must be positive. Got {self.out_channels}")
 
-        self.biases.set_data(
+        self.biases = Parameter(
             op.zeros(
-                (self._out_channels, 1, 1),
+                (self.out_channels, 1, 1),
                 requires_grad=self.requires_grad,
             )
         )
@@ -102,11 +108,11 @@ class Convolution(Trainable):
             raise ValueError(f"Expected 4D input (batch, channels, height, width). Got {data.shape}")
 
         if self._initializer is not None:
-            self._in_channels = data.shape[1]
+            self.in_channels = data.shape[1]
             self._initializate_weights()
 
-        if data.shape[1] != self._in_channels:
-            raise ValueError(f"The input must have {self._in_channels} channels. Got {data.shape[1]}")
+        if data.shape[1] != self.in_channels:
+            raise ValueError(f"The input must have {self.in_channels} channels. Got {data.shape[1]}")
 
         pad_width = (
             (0, 0),
@@ -126,6 +132,15 @@ class Convolution(Trainable):
         return out
 
     def _windows(self, data: Tensor) -> Tensor:
+        """
+        Extracts sliding windows from the input data for convolution.
+
+        Args:
+            data (Tensor): A 4D tensor with shape (batch_size, in_channels, in_height, in_width).
+
+        Returns:
+            Tensor: A 7D tensor with shape (batch_size, 1, out_height, out_width, in_channels, kernel_height, kernel_width).
+        """
         batch_size, in_channels, in_height, in_width = data.shape
         kernel_height, kernel_width = self.kernel_shape
 
@@ -160,20 +175,10 @@ class Convolution(Trainable):
 
         self.weights.set_data(
             self._initializer.initialize(
-                (self._out_channels, 1, 1, self._in_channels) + self.kernel_shape,
+                (self.out_channels, 1, 1, self.in_channels) + self.kernel_shape,
                 requires_grad=self.requires_grad,
                 rng=self.rng,
             )
         )
 
         self._initializer = None
-
-    @property
-    def input_dim(self) -> int:
-        """Returns the number of input channels of the layer."""
-        return self._in_channels
-
-    @property
-    def output_dim(self) -> int:
-        """Returns the number of output channels of the layer."""
-        return self._out_channels

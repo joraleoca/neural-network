@@ -12,16 +12,16 @@ def test_constructor():
     kernel_shape = (1, 1)
     layer = Convolution(out_channels, kernel_shape)
 
-    assert layer.output_dim == out_channels, f"Output channels should be 10. Got {layer.output_dim}."
-    assert layer.kernel_shape == kernel_shape, "Kernel"
+    assert layer.out_channels == out_channels, f"Layer must have {out_channels} out channels. Got {layer.out_channels}"
+    assert layer.kernel_shape == kernel_shape, f"Kernel shape must be {kernel_shape}. Got {layer.kernel_shape}"
 
 
 def test_constructor_channels():
     channels = (10, 100)
     layer = Convolution(channels, (1, 1))
 
-    assert layer.input_dim == channels[0], f"Input channels should be 10. Got {layer.input_dim}."
-    assert layer.output_dim == channels[1], f"Output channels should be 100. Got {layer.output_dim}."
+    assert layer.in_channels == channels[0], f"Input channels should be {channels[0]}. Got {layer.in_channels}."
+    assert layer.out_channels == channels[1], f"Output channels should be {channels[1]}. Got {layer.out_channels}."
 
 
 @pytest.mark.parametrize(
@@ -89,7 +89,7 @@ def test_induced_input_dim_and_weight_initializate():
     data = op.zeros((1, 3, 10, 200))
     layer(data)
 
-    assert layer.input_dim == 3, f"Input channels should be 3. Got {layer.input_dim}."
+    assert layer.in_channels == data.shape[1], f"Input channels should be {data.shape[1]}. Got {layer.in_channels}."
     assert hasattr(layer, "weights"), "Weights should be initialized."
     assert layer.weights.shape == (channels, 1, 1, 3) + kernel_shape, (
         f"Weights shape should be {(channels, 1, 1, 3) + kernel_shape}. Got {layer.weights.shape}."

@@ -2,6 +2,7 @@ import numpy as np
 
 import src.constants as c
 from src.tensor import Tensor, op
+from src.structure import Parameter
 from src.scheduler import Scheduler
 
 from .optimizer import Optimizer
@@ -15,12 +16,14 @@ class Adam(Optimizer):
     b1: float
     b2: float
 
-    _m: list[Tensor[np.floating]]
-    _v: list[Tensor[np.floating]]
+    _m: list[Tensor[np.floating] | Parameter]
+    _v: list[Tensor[np.floating] | Parameter]
 
     _t: int
 
-    def __init__(self, parameters: list[Tensor], lr: Scheduler | float, b1: float = 0.9, b2: float = 0.999) -> None:
+    def __init__(
+        self, parameters: list[Tensor | Parameter], lr: Scheduler | float, b1: float = 0.9, b2: float = 0.999
+    ) -> None:
         if not (0 <= b1 < 1) or not (0 <= b2 < 1):
             raise ValueError(f"The betas must be between 0 (inclusive) and 1 (exclusive). Got b1: {b1} and b2: {b2}")
 
@@ -49,4 +52,8 @@ class Adam(Optimizer):
         lr *= np.sqrt(1 - self.b2**self._t) / (1 - self.b1**self._t)
 
         for param, m, v in zip(self._params, self._m, self._v):
+            shape = param.shape
             param -= lr * m / (np.sqrt(v) + c.EPSILON)
+
+            if shape != param.shape:
+                raise RuntimeError(f"{shape=} != {param.shape=}")

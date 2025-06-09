@@ -541,6 +541,23 @@ class TestFunctionalOperations:
         assert_grad(b, grad_b)
         assert_grad(a, grad_a)
 
+    def test_where(self):
+        """Test the backward computation for the where operation."""
+
+        a = Tensor([1, 2, 3], dtype=np.float32, requires_grad=True)
+        b = Tensor([4, 5, 6], dtype=np.float32, requires_grad=True)
+        condition = Tensor([True, False, True], dtype=bool)
+
+        c = op.where(condition, a, b)
+
+        c.backward()
+
+        expected_grad_a = np.array([1, 0, 1], dtype=np.float32)
+        expected_grad_b = np.array([0, 1, 0], dtype=np.float32)
+
+        assert_grad(a, expected_grad_a)
+        assert_grad(b, expected_grad_b)
+
 
 class TestComplexChainOperations:
     def test_sum_and_max_chain(self):
