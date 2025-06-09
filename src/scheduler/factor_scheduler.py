@@ -9,16 +9,14 @@ class FactorScheduler(Scheduler):
     __slots__ = "factor_lr", "min_lr", "patience_update"
 
     def __init__(self, lr: float, factor_lr: float = 0.01, min_lr: float = 1e-7, patience_update: int = 5) -> None:
-        if not (0 < self.factor_lr <= 1):
-            raise ValueError(f"The factor must be between 0 (exclusive) and 1 (inclusive). Got {self.factor_lr}")
-        if self.learning_rate <= 0:
-            raise ValueError(f"The learning rate must be greater than 0. Got {self.learning_rate}")
-        if self.min_lr <= 0:
-            raise ValueError(f"The minimum learning rate must be greater than 0. Got {self.min_lr}")
-        if self.patience_update < 0:
-            raise ValueError(
-                f"The patience to update the learning rate must be non-negative. Got {self.patience_update}"
-            )
+        if not (0 < factor_lr <= 1):
+            raise ValueError(f"The factor must be between 0 (exclusive) and 1 (inclusive). Got {factor_lr}")
+        if lr <= 0:
+            raise ValueError(f"The learning rate must be greater than 0. Got {lr}")
+        if min_lr <= 0:
+            raise ValueError(f"The minimum learning rate must be greater than 0. Got {min_lr}")
+        if patience_update < 0:
+            raise ValueError(f"The patience to update the learning rate must be non-negative. Got {patience_update}")
 
         super().__init__(lr)
 

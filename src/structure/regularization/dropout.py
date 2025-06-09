@@ -27,7 +27,7 @@ class Dropout(Layer):
         self.rng = rng
 
     def __call__(self, data: Tensor[T]) -> Tensor[T]:
-        if not data.requires_grad or self.p == 0:
+        if not Tensor.training or self.p == 0:
             return data
 
         return op.dropout(data, self.p, rng=self.rng)

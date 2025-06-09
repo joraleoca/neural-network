@@ -14,7 +14,6 @@ from .autograd import (
     functions as func,
     operations as op,
 )
-
 from .config import _ConfigMeta
 from .device import Device
 
@@ -24,7 +23,7 @@ T = TypeVar("T", bound=cp.generic)
 class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
     """A class representing a multidimensional array (tensor) with support for automatic differentiation."""
 
-    __slots__ = "data", "grad", "_requires_grad", "_grad_ctx", "_device"
+    __slots__ = ("data", "grad", "_requires_grad", "_grad_ctx", "_device", "_iter_index")
 
     data: NDArray[T]
     grad: NDArray[cp.floating] | None
@@ -73,6 +72,9 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         self.grad = None
 
     """Magic methods"""
+
+    def __hash__(self) -> int:
+        return id(self)
 
     def __len__(self) -> int:
         return len(self.data)
@@ -189,14 +191,17 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
             other = Tensor(other, device=self.device)
         return op.Matmul.forward(self, other, inplace=True)
 
-    def __eq__(self, other: ArrayLike) -> bool:
+    def __eq__(self, other: ArrayLike) -> NDArray[cp.bool_]:
         xp = cp.get_array_module(self.data)
         if isinstance(other, Tensor):
-            return xp.array_equal(self.data, other.data)
-        return xp.array_equal(self.data, other)
+            return xp.equal(self.data, other.data)
+        return xp.equal(self.data, other)
 
-    def __ne__(self, other: ArrayLike) -> bool:
-        return not self.__eq__(other)
+    def __ne__(self, other: ArrayLike) -> NDArray[cp.bool_]:
+        xp = cp.get_array_module(self.data)
+        if isinstance(other, Tensor):
+            return xp.not_equal(self.data, other.data)
+        return xp.not_equal(self.data, other)
 
     def __lt__(self, other: ArrayLike) -> NDArray[cp.bool_]:
         xp = cp.get_array_module(self.data)
@@ -223,9 +228,16 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
     def __repr__(self) -> str:
         return f"Tensor({self.data}, dtype={self.dtype}, requires_grad={self.requires_grad})"
 
-    def __iter__(self):
-        # TODO: Make the iter return Tensors
-        return iter(self.data)
+    def __iter__(self) -> "Self":
+        self._iter_index = -1
+        return self
+
+    def __next__(self) -> "Tensor[T]":
+        self._iter_index += 1
+        if self._iter_index == self.shape[0]:
+            raise StopIteration()
+
+        return self[self._iter_index]
 
     def __contains__(self, value: T) -> bool:
         return self.data.__contains__(value)
@@ -250,11 +262,6 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
     def dtype(self) -> cp.dtype:
         """Returns the data type (dtype) of the tensor."""
         return self.data.dtype
-
-    @dtype.setter
-    def dtype(self, dtype: DTypeLike) -> None:
-        """Sets the data type (dtype) of the tensor."""
-        self.data = self.data.astype(dtype)
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -321,6 +328,21 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
                     self.data = cp.array(data, dtype=dtype)
             case _:
                 raise ValueError(f"Unknown device {device}")
+
+    def astype(self, dtype: DTypeLike) -> "Self":
+        """Changes the data type (dtype) of the tensor."""
+        self.data = self.data.astype(dtype)
+        return self
+
+    def tolist(self) -> T | list[T] | list[list[T]] | list[list[list[Any]]]:
+        """
+        Converts the tensor data into a nested list structure.
+        Returns:
+            T | list[T] | list[list[T]] | list[list[list[Any]]]:
+            A nested list representation of the tensor data, where the depth of
+            the nested lists corresponds to the dimensions of the tensor.
+        """
+        return self.data.tolist()
 
     def sequential(self, pipeline: "Iterable[Callable[[Tensor], Tensor]]") -> "Tensor[T]":
         """
@@ -391,7 +413,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         """
         return func.Min.forward(self, axis=axis, keepdims=keepdims)
 
-    def mean(self, axis: int | tuple[int, ...] | None = None, keepdims: bool = False) -> "Tensor[T] | T":
+    def mean(self, axis: int | tuple[int, ...] | None = None, keepdims: bool = False) -> "Tensor[T]":
         """
         Computes the mean value of tensor elements over the specified axis.
 
@@ -399,9 +421,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
             axis (int | tuple[int, ...] | None): Axis or axes along which the mean is computed.
             keepdims (bool): If True, the reduced axes are left in the result as dimensions with size one. Default is False.
         Returns:
-            Tensor[T] | T:
-                A tensor with the mean value of elements along the specified axis.
-                If no axis is specified, returns the mean element as a scalar.
+            Tensor[T]: A tensor with the mean value of elements along the specified axis.
         """
         return func.Mean.forward(self, axis=axis, keepdims=keepdims)
 
@@ -419,9 +439,7 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
         Returns:
             Tensor: A tensor with the indices of the maximum values along the specified axis.
         """
-        out_ = func.Argmax.forward(self, axis=axis, keepdims=keepdims)
-        out_.dtype = dtype or self.dtype
-        return out_
+        return func.Argmax.forward(self, axis=axis, keepdims=keepdims).astype(dtype or self.dtype)
 
     def reshape(self, shape: tuple[int, ...], *, inplace: bool = False) -> "Tensor[T]":
         """
@@ -485,9 +503,9 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
             grad = xp.atleast_1d(grad)
 
         if self.grad is None:
-            self.grad = grad
+            self.grad = grad.copy()
         else:
-            self.grad += grad
+            self.grad = self.grad + grad
 
     def backward(self) -> None:
         """
@@ -571,3 +589,17 @@ class Tensor(MutableSequence[T], metaclass=_ConfigMeta):
     def T(self) -> "Tensor[T]":
         """Returns the transpose of the tensor."""
         return func.Transpose.forward(self, inplace=False)
+
+    class train(ContextDecorator):
+        """
+        A context manager and decorator to enable training mode for a block of code.
+        """
+
+        __slots__ = "prev"
+
+        def __enter__(self) -> None:
+            self.prev = Tensor.training
+            Tensor.set_training(True)
+
+        def __exit__(self, *exc) -> None:
+            Tensor.set_training(self.prev)

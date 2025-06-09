@@ -286,7 +286,9 @@ def pad(input: Tensor[T] | ArrayLike, pad_width: int | tuple, *, value: T = 0) -
     return func.Pad.forward(input, pad_width=pad_width, value=value)
 
 
-def stack(tensors: list[Tensor[T]] | tuple[Tensor[T], ...], axis: int = 0) -> Tensor[T]:
+def stack(
+    tensors: list[Tensor[T]] | tuple[Tensor[T], ...], axis: int = 0, *, dtype: str | DTypeLike = None
+) -> Tensor[T]:
     """
     Stack the tensors.\n
     The created tensor propagates the gradient through the tensors.
@@ -296,19 +298,35 @@ def stack(tensors: list[Tensor[T]] | tuple[Tensor[T], ...], axis: int = 0) -> Te
     Returns:
         New tensor composed of the tensors.
     """
-    return func.Stack.forward(*tensors, axis=axis)
+    return func.Stack.forward(*tensors, axis=axis, dtype=dtype)
 
 
-def cce(predicted: Tensor[T], expected: Tensor[T]) -> Tensor[T]:
+def concat(
+    tensors: list[Tensor[T]] | tuple[Tensor[T], ...], axis: int = 0, *, dtype: str | DTypeLike = None
+) -> Tensor[T]:
+    """
+    Concatenate the tensors along the specified axis.
+    Args:
+        tensors (list[Tensor[T]] | tuple[Tensor[T], ...]): The tensors to concatenate.
+        axis (int): The axis along which to concatenate.
+        dtype (str | DTypeLike, optional): The data type of the output tensor.
+    Returns:
+        Tensor: The concatenated tensor.
+    """
+    return func.Concat.forward(*tensors, axis=axis, dtype=dtype)
+
+
+def cce(predicted: Tensor[T], expected: Tensor[T], ignore_token_id: int | None = None) -> Tensor[T]:
     """
     Compute the categorical cross-entropy loss.
     Args:
         predicted (Tensor): The predicted tensor.
         expected (Tensor): The expected tensor.
+        ignore_token_id (int | None, optional): The index to ignore in the loss computation.
     Returns:
         Tensor: The categorical cross-entropy loss.
     """
-    return func.CategoricalCrossentropy.forward(predicted, expected)
+    return func.CategoricalCrossentropy.forward(predicted, expected, ignore_token_id=ignore_token_id)
 
 
 @ensure_input_tensor
@@ -357,6 +375,19 @@ def repeat(input: Tensor[T] | ArrayLike | T, repeats: int, axis: SupportsIndex |
 
 
 @ensure_input_tensor
+def triu(input: Tensor[T] | ArrayLike | T, k: int = 0) -> Tensor[T]:
+    """
+    Return the upper triangular part of the input tensor.
+    Args:
+        input (Tensor | ArrayLike | T): The input data.
+        k (int): The diagonal above which to zero elements.
+    Returns:
+        Tensor: The upper triangular part of the input tensor.
+    """
+    return func.Triu.forward(input, k=k)
+
+
+@ensure_input_tensor
 def relu(input: Tensor[T] | ArrayLike | T) -> Tensor[T]:
     return input * (input > 0)
 
@@ -398,11 +429,24 @@ def dropout(input: Tensor[T] | ArrayLike | T, p: float, *, rng: Any = None) -> T
     return input * mask
 
 
+def where(condition: Tensor[np.bool], x: Tensor[T], y: Tensor[T]) -> Tensor[T]:
+    """
+    Select elements from `x` or `y` based on the condition.
+    Args:
+        condition (Tensor[np.bool]): A boolean tensor that determines which elements to select.
+        x (Tensor[T]): The tensor from which to select elements when the condition is True.
+        y (Tensor[T]): The tensor from which to select elements when the condition is False.
+    Returns:
+        Tensor[T]: A tensor containing elements from `x` where the condition is True, and from `y` where the condition is False.
+    """
+    return func.Where.forward(condition, x, y)
+
+
 def dotproduct_attention(
     queries: Tensor[T],
     keys: Tensor[T],
     values: Tensor[T],
-    valid_lens: Tensor | None = None,
+    attn_mask: Tensor[np.bool] | None = None,
     dropout_p: float = 0,
     *,
     rng: Any = None,
@@ -414,7 +458,7 @@ def dotproduct_attention(
         queries (Tensor[T]): The query tensor of shape (batch size, num queries, d).
         keys (Tensor[T]): The key tensor of shape (batch size, num key-value pairs, d).
         values (Tensor[T]): The value tensor of shape (batch size, num key-value pairs, d).
-        valid_lens (Tensor, optional): The valid lengths tensor as (batch size,) or (batch size, num queries).
+        attn_mask (Tensor[bool], optional): The valid lengths tensor as (batch size,) or (batch size, num queries).
         dropout_p (float, optional): The probability of dropping out elements. Default is 0.
         rng (Any, optional): Random number generator for dropout. Default is None.
 
@@ -423,14 +467,15 @@ def dotproduct_attention(
     """
     scores: Tensor = queries @ transpose(keys, axes=(*range(0, keys.ndim - 2), -1, -2)) / sqrt(queries.shape[-1])
 
-    if valid_lens is not None:
-        xp = cp.get_array_module(scores.data)
+    if attn_mask is not None:
+        if attn_mask.ndim == 2:
+            attn_mask = attn_mask[:, None, :]
 
-        filter = expand_dims(valid_lens, -1) > xp.arange(scores.shape[1])
+        scores += attn_mask
 
-        if valid_lens.ndim == 1:
-            filter = expand_dims(Tensor(filter), -1)
+    weights = softmax(scores)
 
-        scores = scores * filter
+    if Tensor.training:
+        weights = dropout(weights, dropout_p, rng=rng)
 
-    return dropout(softmax(scores), dropout_p, rng=rng) @ values
+    return weights @ values

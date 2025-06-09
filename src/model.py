@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, ClassVar
+from typing import Callable
 
 import numpy as np
 
@@ -20,15 +20,13 @@ class BaseModel(Layer, ABC):
 
     layers: list[Callable[[Tensor], Tensor]]
 
-    required_fields: ClassVar[tuple[str, ...]] = ("layers",)
-
     @abstractmethod
-    def __call__(self, inputs: Tensor[np.floating]) -> Tensor[np.floating]:
+    def __call__(self, *args: Tensor[np.floating]) -> Tensor[np.floating]:
         """
         Perform a forward pass through the neural network.
 
         Args:
-            inputs (Tensor[np.floating]): The input data for the forward pass.
+            args (Tensor[np.floating]): The input data for the forward pass.
         Returns:
             Tensor[np.floating]: The output of the neural network after the forward pass.
         """

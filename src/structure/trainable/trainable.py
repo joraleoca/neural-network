@@ -59,6 +59,6 @@ class Trainable(Layer, ABC):
         self._initializer = initializer
 
     def zero_grad(self) -> None:
-        """Clears the gradients of the weights and biases."""
-        self.weights.zero_grad()
-        self.biases.zero_grad()
+        """Clears the gradients of the parameters."""
+        for param in self.parameters():
+            param.zero_grad()

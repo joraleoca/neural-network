@@ -11,6 +11,7 @@ class _ConfigMeta(ABCMeta):
     _default_device: str = "auto"
     _default_dtype: np.dtype = np.dtype(np.float32)
     _grad: bool = True
+    _train: bool = False
 
     @property
     def default_device(cls) -> str:
@@ -67,6 +68,20 @@ class _ConfigMeta(ABCMeta):
             grad: Whether to compute the gradients.
         """
         cls._grad = grad
+
+    @property
+    def training(cls) -> bool:
+        return cls._train
+
+    @classmethod
+    def set_training(cls, training: bool) -> None:
+        """
+        Set the training for the neural network.
+
+        Args:
+            training: Whether the neural network is training.
+        """
+        cls._train = training
 
     @property
     def default_module(cls):

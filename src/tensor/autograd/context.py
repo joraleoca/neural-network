@@ -4,7 +4,7 @@ from .. import tensor as t
 
 
 class Context:
-    __slots__ = "args", "result", "_backward_fn", "kwargs"
+    # __slots__ = "args", "result", "_backward_fn", "kwargs"
 
     args: tuple["t.Tensor", ...]
     result: "t.Tensor"
@@ -35,7 +35,9 @@ class Context:
         if self.result.grad is None:
             raise ValueError("Cannot compute gradient of a tensor that does not require grad.")
 
-        return self._backward_fn(self)
+        self._backward_fn(self)
+
+        self.result._grad_ctx = None
 
     def __hash__(self) -> int:
         return id(self)

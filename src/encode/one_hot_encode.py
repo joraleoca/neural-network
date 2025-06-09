@@ -54,5 +54,6 @@ class OneHotEncoder[T](Encoder):
         Returns:
             T: The class label corresponding to the highest value in the encoded array.
         """
-        index = op.flatten(op.argmax(encoded, axis=-1))
-        return Tensor([self.labels[i.item()] for i in index], dtype=type(self.labels[0]))
+        index = op.argmax(encoded, axis=-1).ravel()
+        out = Tensor([self.labels[i.item()] for i in index], dtype=type(self.labels[0]))
+        return out.reshape(encoded.shape[:-1])

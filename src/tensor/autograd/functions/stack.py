@@ -1,4 +1,5 @@
 import cupy as cp
+from numpy.typing import DTypeLike
 
 from ..function import Function
 from ... import tensor as t
@@ -9,13 +10,13 @@ class Stack(Function):
     """Stack function."""
 
     @staticmethod
-    def forward(*args: "t.Tensor", axis: int = 0, inplace: bool = False) -> "t.Tensor":
+    def forward(*args: "t.Tensor", axis: int = 0, dtype: str | DTypeLike = None, inplace: bool = False) -> "t.Tensor":
         if inplace:
             raise NotImplementedError("Inplace stack is not supported.")
 
         xp = cp.get_array_module(*args)
         out = t.Tensor(
-            xp.stack(args, axis=axis),
+            xp.stack(args, axis=axis, dtype=dtype),
             requires_grad=Function._requires_grad(*args),
             device=Function._select_device(*args),
         )

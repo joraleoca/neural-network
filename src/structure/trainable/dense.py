@@ -65,9 +65,6 @@ class Dense(Trainable):
 
     def _initialize_weights(self) -> None:
         """Initializes the weights of the layer."""
-        assert self.in_features > 0, (
-            f"Input features have to be valid when initializing weights. Got {self.in_features}"
-        )
         assert self._initializer is not None, "Initializer cannot be None when initializing weights."
 
         self.weights.set_data(

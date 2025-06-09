@@ -36,4 +36,9 @@ class PositionalEncoding(Layer):
         self.dropout_p = dropout_p
 
     def __call__(self, data: Tensor[T]) -> Tensor[T]:
-        return op.dropout(data + self.P[:, : data.shape[1], :], self.dropout_p)
+        out = data + self.P[:, : data.shape[1], :]
+
+        if Tensor.training:
+            out = op.dropout(out, self.dropout_p)
+
+        return out

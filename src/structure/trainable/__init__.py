@@ -8,7 +8,13 @@ from .convolution import Convolution
 from .batchnorm import BatchNorm
 from .recurrent import Recurrent
 from .multihead_attention import MultiHeadAttention
-from .transformer import TransformerEncoder, TransformerDecoder, TransformerEncoderBlock
+from .transformer import (
+    TransformerEncoder,
+    TransformerDecoder,
+    TransformerEncoderBlock,
+    TransformerDecoderBlock,
+    Transformer,
+)
 
 __all__ = (
     "Trainable",
@@ -20,4 +26,6 @@ __all__ = (
     "TransformerEncoder",
     "TransformerDecoder",
     "TransformerEncoderBlock",
+    "TransformerDecoderBlock",
+    "Transformer",
 )

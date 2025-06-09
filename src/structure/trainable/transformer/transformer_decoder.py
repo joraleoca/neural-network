@@ -2,20 +2,18 @@ from itertools import chain
 
 import numpy as np
 
-from src.tensor import Tensor, op
+from src.tensor import Tensor
 
-from ...preprocessing import Embedding, PositionalEncoding
+from ..trainable import Trainable
 from ..batchnorm import BatchNorm
-from ..dense import Dense
 from ..multihead_attention import MultiHeadAttention
 from ..positionwise_ffn import PositionWiseFFN
-from ..trainable import Trainable
 
 
 class TransformerDecoderBlock(Trainable):
     """TransformerDecoderBlock"""
 
-    __slots__ = "features", "_self_attention", "_cross_attention", "_pw_ffn", "_norm1", "_norm2", "_norm3", "dropout"
+    __slots__ = "features", "_self_attention", "_cross_attention", "_pw_ffn", "_norm1", "_norm2", "_norm3"
 
     def __init__(
         self,
@@ -26,9 +24,7 @@ class TransformerDecoderBlock(Trainable):
     ) -> None:
         if features < 0:
             raise ValueError(f"Features must be non-negative. Got {features}")
-
         self.features = features
-        self.dropout = dropout
 
         self._self_attention = MultiHeadAttention(features, num_heads, dropout)
         self._cross_attention = MultiHeadAttention(features, num_heads, dropout)
@@ -40,27 +36,21 @@ class TransformerDecoderBlock(Trainable):
 
     def __call__(
         self,
-        data: Tensor[np.floating],
-        state: Tensor[np.floating],
-        valid_lens_data: Tensor | None = None,
-        valid_lens_state: Tensor | None = None,
+        decoder_input: Tensor[np.floating],
+        encoder_memory: Tensor[np.floating],
+        attn_mask_decoder: Tensor | None = None,
+        attn_mask_encoder: Tensor | None = None,
     ) -> Tensor[np.floating]:
-        if valid_lens_state is None:
-            valid_lens_state = op.repeat(Tensor.default_module.arange(1, state.shape[1] + 1), state.shape[2], axis=1)
+        x = self._norm1(decoder_input)
+        decoder_input = decoder_input + self._self_attention(x, x, x, attn_mask_decoder)
 
-        norm_state = self._norm1(state)
-        state = state + self._self_attention(norm_state, norm_state, norm_state, valid_lens_state)
+        x = self._norm2(decoder_input)
+        decoder_input = decoder_input + self._cross_attention(x, encoder_memory, encoder_memory, attn_mask_encoder)
 
-        if valid_lens_data is None:
-            valid_lens_data = op.repeat(Tensor.default_module.arange(1, data.shape[1] + 1), data.shape[2], axis=1)
+        x = self._norm3(decoder_input)
+        decoder_input = decoder_input + self._pw_ffn(x)
 
-        norm_state = self._norm2(state)
-        state = state + self._cross_attention(norm_state, data, data, valid_lens_data)
-
-        norm_state = self._norm3(state)
-        state = state + self._pw_ffn(norm_state)
-
-        return state
+        return decoder_input
 
     def parameters(self) -> list[Tensor]:
         return (
@@ -76,11 +66,10 @@ class TransformerDecoderBlock(Trainable):
 class TransformerDecoder(Trainable):
     """TransformerDecoder layer"""
 
-    __slots__ = "features", "blocks", "pos_encoding", "embedding", "dense"
+    __slots__ = "features", "blocks"
 
     def __init__(
         self,
-        vocab_size: int,
         features: int,
         num_heads: int,
         features_feedforward: int,
@@ -91,19 +80,18 @@ class TransformerDecoder(Trainable):
         self.blocks = [
             TransformerDecoderBlock(features, num_heads, features_feedforward, dropout) for _ in range(num_blocks)
         ]
-        self.pos_encoding = PositionalEncoding(features, dropout_p=dropout)
-        self.embedding = Embedding(features, vocab_size)
-        self.dense = Dense(features)
 
     def __call__(
-        self, data: Tensor[np.floating], state: Tensor[np.floating], valid_lens: Tensor | None = None
+        self,
+        decoder_input: Tensor[np.floating],
+        encoder_memory: Tensor[np.floating],
+        attn_mask_decoder: Tensor | None = None,
+        attn_mask_encoder: Tensor | None = None,
     ) -> Tensor[np.floating]:
-        data = self.pos_encoding((self.embedding(data) * op.sqrt(self.features)))
-
         for block in self.blocks:
-            state = block(data, state, valid_lens)
+            decoder_input = block(decoder_input, encoder_memory, attn_mask_decoder, attn_mask_encoder)
 
-        return self.dense(state)
+        return decoder_input
 
     def parameters(self) -> list[Tensor]:
-        return list(chain.from_iterable(block.parameters() for block in self.blocks)) + self.dense.parameters()
+        return list(chain.from_iterable(block.parameters() for block in self.blocks))

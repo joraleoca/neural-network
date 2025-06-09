@@ -49,4 +49,8 @@ class Adam(Optimizer):
         lr *= np.sqrt(1 - self.b2**self._t) / (1 - self.b1**self._t)
 
         for param, m, v in zip(self._params, self._m, self._v):
+            shape = param.shape
             param -= lr * m / (np.sqrt(v) + c.EPSILON)
+
+            if shape != param.shape:
+                raise RuntimeError(f"{shape=} != {param.shape=}")
