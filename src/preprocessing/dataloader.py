@@ -54,7 +54,7 @@ class DataLoader[T: Tensor | NDArray | list]:
         self._index = 0
         return self
 
-    def __next__(self) -> tuple[Tensor, Tensor]:
+    def __next__(self) -> tuple[Tensor | list, Tensor | list]:
         if self._index + self.batch_size >= len(self.data):
             raise StopIteration("No more data to load.")
 
