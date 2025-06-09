@@ -5,6 +5,7 @@ import numpy as np
 from src.constants import EPSILON
 from src.scheduler import Scheduler
 from src.tensor import Tensor
+from src.structure import Parameter
 
 
 class Optimizer(ABC):
@@ -15,16 +16,16 @@ class Optimizer(ABC):
     __slots__ = "lr", "_params"
 
     lr: Scheduler | float
-    _params: list[Tensor]
+    _params: list[Tensor | Parameter]
 
     MAX_DELTA_NORM: float = 1.0
 
-    def __init__(self, params: list[Tensor], lr: Scheduler | float) -> None:
+    def __init__(self, params: list[Tensor | Parameter], lr: Scheduler | float) -> None:
         """
         Initialize the optimizer.
 
         Args:
-            params (list[Tensor]): Parameters to optimize.
+            params (list[Tensor | Parameter]): Parameters to optimize.
             lr (Scheduler | float): Learning rate or learning rate scheduler.
         """
         self.lr = lr
@@ -61,6 +62,16 @@ class Optimizer(ABC):
         """
         for param in self._params:
             param.zero_grad()
+
+    def params_requires_grad(self, requires_grad: bool = True) -> None:
+        """
+        Sets the requires_grad attribute for all parameters.
+
+        Args:
+            requires_grad (bool): Whether the parameters should require gradients.
+        """
+        for param in self._params:
+            param.requires_grad = requires_grad
 
     @abstractmethod
     def _optimize(

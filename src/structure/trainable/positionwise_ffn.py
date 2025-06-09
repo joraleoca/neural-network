@@ -16,6 +16,3 @@ class PositionWiseFFN(Trainable):
 
     def __call__(self, data: Tensor[np.floating]) -> Tensor[np.floating]:
         return self.dense2(op.relu(self.dense1(data)))
-
-    def parameters(self) -> list[Tensor]:
-        return self.dense1.parameters() + self.dense2.parameters()

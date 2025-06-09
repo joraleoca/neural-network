@@ -5,14 +5,17 @@ import numpy as np
 from src.tensor import Tensor, op
 from src.initialization import Initializer, XavierUniform
 
+from ..parameter import Parameter
 from .trainable import Trainable
 
 
 class Dense(Trainable):
     """Dense layer in a neural network."""
 
-    __slots__ = "in_features", "out_features"
+    __slots__ = "weights", "biases", "in_features", "out_features", "_initializer"
 
+    weights: Parameter
+    biases: Parameter
     in_features: int
     out_features: int
 
@@ -34,7 +37,10 @@ class Dense(Trainable):
         Raises:
             ValueError: If any features is incorrect.
         """
-        super().__init__(initializer, rng=rng)
+        super().__init__(rng=rng)
+
+        self._initializer = initializer
+        self.weights = Parameter([])
 
         if isinstance(features, int):
             if features <= 0:
@@ -51,7 +57,7 @@ class Dense(Trainable):
             self.in_features, self.out_features = features
             self._initialize_weights()
 
-        self.biases.set_data(op.zeros((1, self.out_features)))
+        self.biases = Parameter(op.zeros((1, self.out_features)))
 
     def __call__(self, data: Tensor[np.floating]) -> Tensor[np.floating]:
         if self._initializer is not None:

@@ -12,7 +12,7 @@ from .dense import Dense
 class MultiHeadAttention(Trainable):
     """MultiHeadAttention layer in a neural network."""
 
-    __slots__ = "features", "num_heads", "W_o", "W_q", "W_k", "W_v", "dropout_p"
+    __slots__ = "num_heads", "W_o", "W_q", "W_k", "W_v", "dropout_p"
 
     def __init__(
         self,
@@ -32,16 +32,11 @@ class MultiHeadAttention(Trainable):
             initializer (Initializer): The initializer for the weights of this layer.
             rng (Any): A random number generator instance for initializing weights.
         """
-        super().__init__(initializer, rng=rng)
-
-        self.weights = None
-        self.biases = None
-        # TODO: Change how this works
+        super().__init__(rng=rng)
 
         if not features % num_heads == 0:
             raise ValueError(f"Features must be divisible by num_heads. Got {features=} and {num_heads=}")
 
-        self.features = features
         self.num_heads = num_heads
 
         dense_features = (features, features)
@@ -92,10 +87,11 @@ class MultiHeadAttention(Trainable):
         arr = op.transpose(arr, axes=(0, 2, 1, 3))
         return arr.reshape((-1, arr.shape[2], arr.shape[3]))
 
-    def parameters(self) -> list[Tensor]:
+    @property
+    def features(self) -> int:
         """
-        Returns the parameters of the layer
+        Returns the number of features in the layer.
         Returns:
-            list[Tensor]: The parameters of the layer.
+            int: The number of features in the layer.
         """
-        return self.W_o.parameters() + self.W_k.parameters() + self.W_q.parameters() + self.W_v.parameters()
+        return self.W_k.in_features

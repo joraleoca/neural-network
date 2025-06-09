@@ -2,6 +2,7 @@ from typing import Any
 
 import numpy as np
 
+from ..parameter import Parameter
 from .trainable import Trainable
 from src.tensor import Tensor, op
 from src.initialization import Initializer, HeUniform
@@ -11,13 +12,18 @@ class Convolution(Trainable):
     """Convolution layer in a neural network."""
 
     __slots__ = (
+        "weights",
+        "biases",
         "in_channels",
         "out_channels",
         "kernel_shape",
         "stride",
         "padding",
+        "_initializer",
     )
 
+    weights: Parameter
+    biases: Parameter
     in_channels: int
     out_channels: int
 
@@ -56,10 +62,12 @@ class Convolution(Trainable):
         if len(kernel_shape) != 2:
             raise ValueError(f"The kernel size must have 2 dimension. Got {len(kernel_shape)}")
 
-        super().__init__(initializer, rng=rng)
+        super().__init__(rng=rng)
         self.kernel_shape = kernel_shape
         self.stride = stride
         self.padding = padding
+        self._initializer = initializer
+        self.weights = Parameter([])
 
         if isinstance(channels, tuple):
             self.in_channels, self.out_channels = channels
@@ -74,7 +82,7 @@ class Convolution(Trainable):
             if self.out_channels <= 0:
                 raise ValueError(f"The out channels must be positive. Got {self.out_channels}")
 
-        self.biases.set_data(
+        self.biases = Parameter(
             op.zeros(
                 (self.out_channels, 1, 1),
                 requires_grad=self.requires_grad,
@@ -124,6 +132,15 @@ class Convolution(Trainable):
         return out
 
     def _windows(self, data: Tensor) -> Tensor:
+        """
+        Extracts sliding windows from the input data for convolution.
+
+        Args:
+            data (Tensor): A 4D tensor with shape (batch_size, in_channels, in_height, in_width).
+
+        Returns:
+            Tensor: A 7D tensor with shape (batch_size, 1, out_height, out_width, in_channels, kernel_height, kernel_width).
+        """
         batch_size, in_channels, in_height, in_width = data.shape
         kernel_height, kernel_width = self.kernel_shape
 

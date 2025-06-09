@@ -1,5 +1,3 @@
-from itertools import chain
-
 import numpy as np
 
 from src.tensor import Tensor
@@ -40,14 +38,6 @@ class TransformerEncoderBlock(Trainable):
 
         return data
 
-    def parameters(self) -> list[Tensor]:
-        return (
-            self._attention.parameters()
-            + self._norm1.parameters()
-            + self._norm2.parameters()
-            + self._pw_ffn.parameters()
-        )
-
 
 class TransformerEncoder(Trainable):
     """TransformerEncoder layer"""
@@ -72,6 +62,3 @@ class TransformerEncoder(Trainable):
             data = block(data, attn_mask)
 
         return data
-
-    def parameters(self) -> list[Tensor]:
-        return list(chain.from_iterable(block.parameters() for block in self.blocks))

@@ -2,6 +2,7 @@ import numpy as np
 
 from src.tensor import Tensor
 from src.scheduler import Scheduler
+from src.structure import Parameter
 
 from .optimizer import Optimizer
 
@@ -21,7 +22,7 @@ class SGD(Optimizer):
 
     def __init__(
         self,
-        parameters: list[Tensor],
+        parameters: list[Tensor | Parameter],
         lr: Scheduler | float,
         momentum: float = 0.0,
         weight_decay: float = 0.0,

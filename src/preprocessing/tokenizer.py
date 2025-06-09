@@ -42,10 +42,10 @@ class Tokenizer:
         decoded = []
 
         for index in indices:
-            if 0 < (i := index.item()) < len(self.vocab):
+            if 0 <= (i := index.item()) < len(self.vocab):
                 word = self.vocab[i]
             else:
-                word = "<unk>"
+                word = self._UNK
 
             decoded.append(word)
 

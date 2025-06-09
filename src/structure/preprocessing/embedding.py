@@ -3,6 +3,7 @@ from src.tensor import Tensor, op
 import cupy as cp
 
 from ..layer import Layer
+from ..parameter import Parameter
 from src.initialization import Initializer, XavierUniform
 
 
@@ -25,7 +26,7 @@ class Embedding(Layer):
         if vocab_size < 0:
             raise ValueError(f"Vocabulary size must be non-negative. Got {vocab_size}")
 
-        self.weights = initializer.initialize((vocab_size, features))
+        self.weights = Parameter(initializer.initialize((vocab_size, features)))
 
     def __call__(self, data: Tensor[cp.integer]) -> Tensor:
         # TODO: Fix this workaround
@@ -38,6 +39,3 @@ class Embedding(Layer):
             out = self.weights[indices]
 
         return out
-
-    def parameters(self) -> list[Tensor]:
-        return [self.weights]

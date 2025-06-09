@@ -120,13 +120,5 @@ class Transformer(Trainable):
         output = op.stack(output).astype(int)
         return output
 
-    def parameters(self) -> list[Tensor]:
-        return (
-            self.encoder.parameters()
-            + self.decoder.parameters()
-            + self.encoder_embedding.parameters()
-            + self.decoder_embedding.parameters()
-        )
-
     def _generate_square_subsequent_mask(self, size: int) -> Tensor:
         return op.triu(op.ones((size, size)) * float("-inf"), k=1)[None, :, :]
